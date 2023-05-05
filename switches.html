@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<!--    
+    Inspired by Ben Sparks Numberphile video
+    https://www.youtube.com/watch?v=-UBDRX6bk-A
+-->
+
+<head>
+    <script>
+        var canvas;
+        var canvasContext;
+        var elPopup;
+        var body;
+        const el = (sel, par) => (par || document).querySelector(sel);
+
+        // Note: Maximum canvas dimension 32,767 x 32,767
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
+        var cols = 1590;
+        var rows = 800;
+		var switch_size = 1;
+        var nswitches = cols * rows;
+        (switches = []).length = nswitches + 1;
+        switches.fill(1); // Faster initialisation of switches array
+        (flips = []).length = nswitches + 1;
+        flips.fill(0);       // No of times switch is flipped
+        onColor = '#ff0022';
+        offColor = '#111111';
+        var switchnum = 1;
+        var timer = 0;
+
+        window.onload = function () {
+            // canvas = document.getElementById('myCanvas');
+            canvas = document.querySelector("#myCanvas");
+            canvas.width = cols * switch_size;
+            canvas.height = rows * switch_size;
+            canvasContext = canvas.getContext('2d');
+
+            elPopup = document.querySelector("#infotable");
+
+            canvas.addEventListener('click', showData);
+            document.querySelector('body').addEventListener('click', showPopup);
+
+
+            timer = setInterval(flip_switches, 2);
+
+
+            // timer2 = requestAnimationFrame(flip_switches);
+            // timer3 = setInterval(flip_switches, 16);
+
+            // for (let j=0; j<100000; j++) flip_switches();
+            // timer = requestAnimationFrame(squareNumbers);
+        }
+
+
+        function flip_switches() {
+
+            // console.log(`current=${clicked}`);
+            document.getElementById('currentswitch').innerHTML = `${switchnum} of ${nswitches}`;
+            for (var s = switchnum; s <= nswitches; s += switchnum) {
+                // Canvas starts at 0,0
+                // Switches, row & col start at 1
+                x = switch_size * ((s - 1) % cols);
+                y = switch_size * Math.floor((s - 1) / cols);
+
+                switches[s] = 1 - switches[s];
+                if (switches[s] == 1)
+                    canvasContext.fillStyle = offColor;
+                else
+                    canvasContext.fillStyle = onColor;
+
+                flips[s]++;
+                // Color a Gree-Red scale to show how many times switeches are flipped
+                let hsl = numberToHsl(flips[s]);
+                // canvasContext.fillStyle = `${hsl}`
+                canvasContext.fillRect(x, y, switch_size, switch_size);
+            }
+
+            switchnum++;
+
+            if (switchnum > nswitches) {
+                // console.log("STOPPING, timer=" + timer);
+                clearInterval(timer);
+                // cancelAnimationFrame(timer);
+            }
+            else {
+                timer2 = requestAnimationFrame(flip_switches);
+                // console.log("continue... timer=" + timer);
+            }
+
+        }
+
+        function showData(event) {
+            let rect = canvas.getBoundingClientRect();
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+            col = Math.floor(x / switch_size) + 1;
+            row = Math.floor(y / switch_size) + 1;
+
+            let switchn = (row - 1) * cols + col;
+
+            let sqrt_s = Math.sqrt(switchn);
+            if (Math.floor(sqrt_s) == sqrt_s)
+                sqrt = `(${sqrt_s}^2)`;
+            else
+                sqrt = '';
+
+            let ff = getFactors(switchn);
+            fstr = `${ff.numFactors}: ${ff.factorList}`;
+
+            // Write current selected switch to screen
+            document.getElementById('clicked').innerHTML = `${switchn} ${sqrt}  (r${row}, c${col})`
+            document.getElementById('factors').innerHTML = `${fstr}`
+
+            var pixelData = canvasContext.getImageData(x, y, 1, 1).data;
+            r = pixelData[0];
+            g = pixelData[1];
+            b = pixelData[2];
+            a = pixelData[3];
+
+            // Debug info to screen
+            document.getElementById('flips').innerHTML = flips[switchn];
+            document.getElementById('debug').innerHTML = `rgba: ${r},${g},${b} ${a}  x,y: ${x},${y}`;
+            document.getElementById('color').style.backgroundColor = `rgb(${r},${g},${b})`;
+
+            showPopup(event);
+        }
+
+        function squareNumbers() {
+            let sqrt_n = Math.sqrt(nswitches);
+
+            for (var s = 1; s <= sqrt_n; s++) {
+                s_sqr = s * s;
+                x = switch_size * ((s_sqr - 1) % cols);
+                y = switch_size * Math.floor((s_sqr - 1) / cols);
+                canvasContext.fillStyle = onColor;
+                canvasContext.fillRect(x, y, switch_size, switch_size);
+            }
+            clearInterval(timer);
+        }
+
+        function getFactors(num) {
+            let factorList = "";
+            let numFactors = 0;
+            for (let i = 1; i <= num; i++) {
+                if (num % i == 0) {
+                    factorList += `${i},`;
+                    numFactors++;
+                }
+            }
+            return { numFactors, factorList };
+        }
+
+        function numberToHsl(num) {
+            // Convert range 0 - 50 into Green -> Red (120 to 0 in hue)
+            let min_input = 0;
+            let max_input = 50;
+            let hue0 = 160;
+            let hue1 = 0;
+            var hue = hue0 + (hue1 - hue0) * num / (max_input - min_input);
+            if (hue < hue1) hue = 0;
+            return 'hsl(' + hue + ', 100%, 50%)';
+        }
+
+        const showPopup = (evt) => {
+            // Get clicked target
+            const elTarget = evt.target;
+
+            // Close currently open popup (if any):
+            if (elPopup) elPopup.classList.remove("is-active");
+
+            // Get initiator button
+            const elBtn = elTarget.closest("[data-popup]");
+
+            // Not a valid button
+            if (!elBtn) return;
+
+            // Get the popup
+            elPopup = el(elBtn.dataset.popup);
+
+            // No matching popup in this page, do nothing
+            if (!elPopup) return;
+
+            // Get its parent (BODY) so that we can calculate the min max
+            // available space
+            const elParent = elPopup.parentElement;
+
+            // Position:
+            const absX = evt.clientX + window.scrollX;
+            const absY = evt.clientY + window.scrollY;
+
+            const bcrParent = elParent.getBoundingClientRect();
+            const bcrPopup = elPopup.getBoundingClientRect();
+
+            const maxX = bcrParent.width - bcrPopup.width;
+            const maxY = bcrParent.height - bcrPopup.height;
+
+            const x = Math.max(0, Math.min(absX, maxX));
+            const y = Math.max(0, Math.min(absY, maxY));
+
+            // Show popup
+            Object.assign(elPopup.style, {
+                left: `${x}px`,
+                top: `${y}px`,
+            });
+            elPopup.classList.add("is-active");
+        };
+
+    </script>
+
+    <style id="compiled-css" type="text/css">
+        body {
+            font: 12pt calibri;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        #canvContainer {
+            border: 1px solid #333333;
+            display: inline-block;
+            margin: auto;
+            height: fit-content;
+        }
+
+        #myCanvas {
+            margin: 0;
+            border: 0;
+            background-color: #dddddd;
+        }
+
+        #labels {
+            float: left;
+            /* padding-right: 10px; */
+        }
+
+        #data {
+            float: left;
+            width: 280px;
+        }
+
+        #factors {
+            max-width: 600px;
+            overflow-wrap: break-word;
+        }
+
+        #infotable {
+            display: inline;
+        }
+
+        #color {
+            width: 50px;
+        }
+
+
+        td {
+            border: 1px solid #aaa;
+            /* padding-right: 10px; */
+            background-color: #dddddd;
+        }
+
+        table {
+            /* border-spacing: 0px; */
+            border-collapse: separate;
+            border-spacing: 0px;
+            border-collapse:  expression('separate', cellSpacing = '0px');
+        }
+        
+        .popup {
+            position: absolute;
+            background: gold;
+            visibility: hidden;
+            pointer-events: none;
+            min-width: 100px;
+            padding: 5px;
+        }
+
+
+        .popup.is-active {
+            visibility: visible;
+            pointer-events: auto;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="infotable" class="popup">
+        <table>
+            <tr>
+                <td class="label">Current</td>
+                <td class="data" id="currentswitch"></td>
+            </tr>
+            <tr>
+                <td class="label">Clicked</td>
+                <td class="data" id="clicked"></td>
+            </tr>
+            <tr>
+                <td class="label">Factors</td>
+                <td class="data" id="factors"></td>
+            </tr>
+            <tr>
+                <td class="label">Flips</td>
+                <td class="data" id="flips"></td>
+            </tr>
+            <tr>
+                <td class="label">Debug</td>
+                <td class="data" id="debug"></td>
+            </tr>
+            <tr>
+                <td class="label">Color</td>
+                <td class="data">
+                    <div id="color">&nbsp;</div>
+                </td>
+            </tr>
+            </tr>
+        </table>
+    </div>
+    <div id="canvContainer" data-popup="#infotable">
+        <canvas id="myCanvas" width="2000" height="2000"></canvas>
+    </div>
+</body>
+
+</html>
