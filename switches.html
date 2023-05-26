@@ -10,81 +10,120 @@
         var canvas;
         var canvasContext;
         var elPopup;
-        var body;
-        const el = (sel, par) => (par || document).querySelector(sel);
-
-        // Note: Maximum canvas dimension 32,767 x 32,767
-        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
-        var cols = 1590;
-        var rows = 800;
-		var switch_size = 1;
-        var nswitches = cols * rows;
-        (switches = []).length = nswitches + 1;
-        switches.fill(1); // Faster initialisation of switches array
-        (flips = []).length = nswitches + 1;
-        flips.fill(0);       // No of times switch is flipped
+        var elBody;
+        var cols;
+        var rows;
+        var person;
+        var nswitches;
+        var switch_size;
+        var switches;
+        var flips;
+        var delay_ms;
+        var running = true;
         onColor = '#ff0022';
         offColor = '#111111';
-        var switchnum = 1;
-        var timer = 0;
 
-        window.onload = function () {
-            // canvas = document.getElementById('myCanvas');
-            canvas = document.querySelector("#myCanvas");
+        const el = (sel, par) => (par || document).querySelector(sel);
+
+
+        function init() {
+            // Note: Maximum canvas dimension 32,767 x 32,767
+            // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
+
+            cols = el('#ncols').value;
+            nswitches = el('#nswitches').value;
+            delay_ms = el('#delayms').value;
+
+            console.log(`cols = ${cols}`);
+            console.log(`nswitches = ${nswitches}`);
+
+            rows = Math.floor(nswitches / cols);
+            (switches = []).length = nswitches + 1;
+            switches.fill(1);    // Faster initialisation of switches array
+            (flips = []).length = nswitches + 1;
+            flips.fill(0);       // No of times switch is flipped
+            
+            person = 1;
+            timer = 0;
+
+            elBody = el('body');
+            canvContainer = el('#canvContainer');
+            canvas = el('#myCanvas');
+            canvas.width = canvContainer.clientWidth;
+            
+            // switch_size = 5;
+            switch_size = Math.floor(canvas.width / cols);
+            switch_size = (canvas.width / cols);
             canvas.width = cols * switch_size;
             canvas.height = rows * switch_size;
-            canvasContext = canvas.getContext('2d');
 
-            elPopup = document.querySelector("#infotable");
-
-            canvas.addEventListener('click', showData);
-            document.querySelector('body').addEventListener('click', showPopup);
-
-
-            timer = setInterval(flip_switches, 2);
-
-
-            // timer2 = requestAnimationFrame(flip_switches);
-            // timer3 = setInterval(flip_switches, 16);
-
-            // for (let j=0; j<100000; j++) flip_switches();
-            // timer = requestAnimationFrame(squareNumbers);
+            console.log(`Sw Size= ${switch_size}`);
+            console.log(`Cont W = ${canvContainer.clientWidth}`);
+            console.log(`Cont H = ${canvContainer.clientHeight}`);
+            canvas = el('#myCanvas');
+            console.log(`Canvas W = ${canvas.width}`);
+            console.log(`Canvas H = ${canvas.height}`);
         }
 
+        function play_pause() {
+            running = !running;
+        }
+
+        function continue_animation() {
+            init();
+
+            canvasContext = canvas.getContext('2d');
+            canvas.addEventListener('click', showData);
+            elBody.addEventListener('click', showPopup);
+
+            running = true;
+            timer = setInterval(flip_switches, delay_ms);
+
+            // A quick way to just show the squares
+            // squareNumbers(lines=true);
+        }
 
         function flip_switches() {
 
             // console.log(`current=${clicked}`);
-            document.getElementById('currentswitch').innerHTML = `${switchnum} of ${nswitches}`;
-            for (var s = switchnum; s <= nswitches; s += switchnum) {
-                // Canvas starts at 0,0
-                // Switches, row & col start at 1
-                x = switch_size * ((s - 1) % cols);
-                y = switch_size * Math.floor((s - 1) / cols);
+            document.getElementById('personid').value = person;
 
-                switches[s] = 1 - switches[s];
-                if (switches[s] == 1)
-                    canvasContext.fillStyle = offColor;
-                else
-                    canvasContext.fillStyle = onColor;
+            if (running) {
 
-                flips[s]++;
-                // Color a Gree-Red scale to show how many times switeches are flipped
-                let hsl = numberToHsl(flips[s]);
-                // canvasContext.fillStyle = `${hsl}`
-                canvasContext.fillRect(x, y, switch_size, switch_size);
+                for (var switch_num = person; switch_num <= nswitches; switch_num += person) {
+                    // Canvas starts at 0,0
+                    // Switches, row & col start at 1
+                    x = switch_size * ((switch_num - 1) % cols);
+                    y = switch_size * Math.floor((switch_num - 1) / cols);
+
+                    switches[switch_num] = 1 - switches[switch_num];
+                    if (switches[switch_num] == 1)
+                        canvasContext.fillStyle = offColor;
+                    else
+                        canvasContext.fillStyle = onColor;
+
+                    flips[switch_num]++;
+                    // Color a Gree-Red scale to show how many times switeches are flipped
+                    let hsl = numberToHsl(flips[switch_num]);
+                    // canvasContext.fillStyle = `${hsl}`
+                    canvasContext.fillRect(x, y, switch_size, switch_size);
+                }
+                
+                person++;
             }
 
-            switchnum++;
-
-            if (switchnum > nswitches) {
-                // console.log("STOPPING, timer=" + timer);
+            if (person >= nswitches) {
                 clearInterval(timer);
+                running = false;
                 // cancelAnimationFrame(timer);
             }
             else {
-                timer2 = requestAnimationFrame(flip_switches);
-                // console.log("continue... timer=" + timer);
+                // Setting a new time/animation frame here seems to cause JS to run 
+                // faster by skipping frames dues to multiple threads (?)
+                // Comment out to use the delay parameter from the html page
+                if (delay_ms == 0) {
+                    timer2 = requestAnimationFrame(flip_switches);
+                }
             }
 
         }
@@ -122,11 +161,15 @@
             document.getElementById('debug').innerHTML = `rgba: ${r},${g},${b} ${a}  x,y: ${x},${y}`;
             document.getElementById('color').style.backgroundColor = `rgb(${r},${g},${b})`;
 
-            showPopup(event);
         }
 
-        function squareNumbers() {
+        function squareNumbers(lines = false) {
             let sqrt_n = Math.sqrt(nswitches);
+
+            var old_x = 0;
+            var old_y = 0;
+            canvasContext.lineWidth = 1;
+            canvasContext.strokeStyle = '#33ff33';
 
             for (var s = 1; s <= sqrt_n; s++) {
                 s_sqr = s * s;
@@ -134,6 +177,16 @@
                 y = switch_size * Math.floor((s_sqr - 1) / cols);
                 canvasContext.fillStyle = onColor;
                 canvasContext.fillRect(x, y, switch_size, switch_size);
+
+                if (lines) {
+                    canvasContext.beginPath();
+                    canvasContext.moveTo(old_x, old_y);
+                    canvasContext.lineTo(x, y);
+                    canvasContext.stroke();
+                }
+
+                old_x = x;
+                old_y = y;
             }
             clearInterval(timer);
         }
@@ -202,39 +255,24 @@
                 left: `${x}px`,
                 top: `${y}px`,
             });
+            // showData(evt);
             elPopup.classList.add("is-active");
         };
 
+
+
     </script>
 
-    <style id="compiled-css" type="text/css">
+    <style type="text/css">
         body {
-            font: 12pt calibri;
-            margin: 0px;
-            padding: 0px;
+            background-color: #111111;
+            color: #dddddd;
+            font: 11pt consolas, calibri;
         }
 
-        #canvContainer {
-            border: 1px solid #333333;
-            display: inline-block;
-            margin: auto;
-            height: fit-content;
-        }
-
-        #myCanvas {
-            margin: 0;
-            border: 0;
-            background-color: #dddddd;
-        }
-
-        #labels {
-            float: left;
-            /* padding-right: 10px; */
-        }
-
-        #data {
-            float: left;
-            width: 280px;
+        .label {
+            /* float: left; */
+            padding-right: 10px;
         }
 
         #factors {
@@ -242,53 +280,92 @@
             overflow-wrap: break-word;
         }
 
-        #infotable {
-            display: inline;
-        }
-
         #color {
             width: 50px;
         }
 
-
         td {
             border: 1px solid #aaa;
-            /* padding-right: 10px; */
-            background-color: #dddddd;
         }
 
         table {
-            /* border-spacing: 0px; */
+            font-size: 10pt;
             border-collapse: separate;
             border-spacing: 0px;
-            border-collapse:  expression('separate', cellSpacing = '0px');
+            border-collapse: expression('separate', cellSpacing='0px');
         }
-        
+
         .popup {
             position: absolute;
-            background: gold;
+            background: #333333;
             visibility: hidden;
             pointer-events: none;
             min-width: 100px;
             padding: 5px;
         }
 
-
         .popup.is-active {
             visibility: visible;
             pointer-events: auto;
+        }
+
+        #myform {
+            margin: 0.5em 0 0.5em 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            max-width: 2em;
+            gap: 0.5em
+        }
+
+        input,
+        button {
+            font: 11pt consolas, calibri;
+        }
+
+        input {
+            text-align: right;
+            max-width: 16em;
+            background-color: #dddddd;
+            border-radius: 2px;
+            border: 1px solid #767676;
+            color: #333333;
+
+        }
+
+        #personid {
+            border: none;
+            pointer-events:none;
+        }
+
+        button {
+            display: inline;
+            float: right;
+            color: white;
+            background-color: rgb(145, 33, 33);
         }
     </style>
 
 </head>
 
 <body>
+    <h3>Switches</h3>
+    <div id="myform">
+        <label>Number of switches</label>
+        <label>Switches per row</label>
+        <label>Animation delay (ms)</label>
+        <label>Current Switcher</label>
+
+        <input id="nswitches" value="10000" required pattern="[0-9]+">
+        <input id="ncols" value="100" required pattern="[0-9]+">
+        <input id="delayms" value="10" required pattern="[0-9]+">
+        <input id="personid" readonly>
+        <button onclick="continue_animation()">Start</button>
+        <button onclick="play_pause()">Pause</button>
+        <br />
+    </div>
+
     <div id="infotable" class="popup">
         <table>
-            <tr>
-                <td class="label">Current</td>
-                <td class="data" id="currentswitch"></td>
-            </tr>
             <tr>
                 <td class="label">Clicked</td>
                 <td class="data" id="clicked"></td>
@@ -314,8 +391,9 @@
             </tr>
         </table>
     </div>
+
     <div id="canvContainer" data-popup="#infotable">
-        <canvas id="myCanvas" width="2000" height="2000"></canvas>
+        <canvas id="myCanvas" width="1" height="1"></canvas>
     </div>
 </body>
 
