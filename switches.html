@@ -188,12 +188,6 @@
             g = pixelData[1];
             b = pixelData[2];
             a = pixelData[3];
-
-            // Debug info to screen
-            document.getElementById('flips').innerHTML = flips[switchn];
-            document.getElementById('debug').innerHTML = `rgba: ${r},${g},${b} ${a}  x,y: ${x},${y}`;
-            document.getElementById('color').style.backgroundColor = `rgb(${r},${g},${b})`;
-
         }
 
         function squareNumbers(lines = false) {
@@ -430,9 +424,9 @@
             overflow-wrap: break-word;
         }
 
-        #color {
+        /* #color {
             width: 50px;
-        }
+        } */
 
         /* Toggle Switch */
         .switch {
@@ -544,21 +538,6 @@
             <tr>
                 <td class="field_name">Factors</td>
                 <td class="data" id="factors">55</td>
-            </tr>
-            <tr>
-                <td class="field_name">Flips</td>
-                <td class="data" id="flips">55</td>
-            </tr>
-            <tr>
-                <td class="field_name">Debug</td>
-                <td class="data" id="debug">55</td>
-            </tr>
-            <tr>
-                <td class="field_name">Color</td>
-                <td class="data">
-                    <div id="color">&nbsp;</div>
-                </td>
-            </tr>
             </tr>
         </table>
     </div>
