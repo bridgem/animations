@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html>
 <!--    
-    Inspired by Ben Sparks Numberphile video
+    Martin Bridge, Apr 2023
+
+    Inspired by Ben Sparks' Numberphile video on the switches (aka lockers) problem
     https://www.youtube.com/watch?v=-UBDRX6bk-A
 -->
 
 <head>
     <script>
+        /* TODO
+            Select heatmap vs switch state
+            Allow change of delay on Start ot Play/Pause
+            Switch borders vs none
+            Separately selectable switch size vs auto size  (dependent input fields)
+        */
         var canvas;
         var canvasContext;
         var elPopup;
@@ -19,8 +27,10 @@
         var switches;
         var flips;
         var delay_ms;
+        var show_activations = false;  // Can display #activations or switch state
+        var timer = 0;
         var running = true;
-        onColor = '#ff0022';
+        onColor = '#33dd00';
         offColor = '#111111';
 
         const el = (sel, par) => (par || document).querySelector(sel);
@@ -37,39 +47,47 @@
             console.log(`cols = ${cols}`);
             console.log(`nswitches = ${nswitches}`);
 
-            rows = Math.floor(nswitches / cols);
+
+            // Last row could be incomplete
+            if (nswitches % cols == 0)
+                rows= nswitches / cols;
+            else
+                rows = Math.floor(nswitches / cols) + 1;
+
+
             (switches = []).length = nswitches + 1;
             switches.fill(1);    // Faster initialisation of switches array
             (flips = []).length = nswitches + 1;
             flips.fill(0);       // No of times switch is flipped
             
             person = 1;
-            timer = 0;
+
+            // In case we have already been running...
+            if (timer != 0) {
+                clearInterval(timer);
+                timer = 0;
+            }
 
             elBody = el('body');
             canvContainer = el('#canvContainer');
             canvas = el('#myCanvas');
             canvas.width = canvContainer.clientWidth;
             
-            // switch_size = 5;
+
             switch_size = Math.floor(canvas.width / cols);
-            switch_size = (canvas.width / cols);
+            // switch_size = (canvas.width / cols);
             canvas.width = cols * switch_size;
             canvas.height = rows * switch_size;
 
             console.log(`Sw Size= ${switch_size}`);
-            console.log(`Cont W = ${canvContainer.clientWidth}`);
-            console.log(`Cont H = ${canvContainer.clientHeight}`);
             canvas = el('#myCanvas');
-            console.log(`Canvas W = ${canvas.width}`);
-            console.log(`Canvas H = ${canvas.height}`);
         }
 
         function play_pause() {
             running = !running;
         }
 
-        function continue_animation() {
+        function start_animation() {
             init();
 
             canvasContext = canvas.getContext('2d');
@@ -83,36 +101,55 @@
             // squareNumbers(lines=true);
         }
 
+        function draw_switch(n) {
+
+            // Canvas starts at 0,0
+            // Switches, row & col start at 1
+            x = switch_size * ((n - 1) % cols);
+            y = switch_size * Math.floor((n - 1) / cols);
+
+            if (switches[n] == 1)
+                canvasContext.fillStyle = offColor;
+            else
+                canvasContext.fillStyle = onColor;
+
+            // Color a Green-Red scale to show how many times switeches are flipped
+            if (show_activations) {
+                hsl = numberToHsl(flips[n]);
+                canvasContext.fillStyle = `${hsl}`
+            }
+            canvasContext.fillRect(x, y, switch_size, switch_size);
+
+        }
+
+        function redraw_all() {
+            // Redraw current state of switches in case display type (state vs activations has changed)
+            for (s=1; s <= nswitches; s++)
+                draw_switch(s);
+        }
+
         function flip_switches() {
 
-            // console.log(`current=${clicked}`);
-            document.getElementById('personid').value = person;
+            document.getElementById('personid').innerHTML = person;
 
             if (running) {
 
+                // Flip all multiples of current person
                 for (var switch_num = person; switch_num <= nswitches; switch_num += person) {
-                    // Canvas starts at 0,0
-                    // Switches, row & col start at 1
-                    x = switch_size * ((switch_num - 1) % cols);
-                    y = switch_size * Math.floor((switch_num - 1) / cols);
 
+                    // Invert the switch value
                     switches[switch_num] = 1 - switches[switch_num];
-                    if (switches[switch_num] == 1)
-                        canvasContext.fillStyle = offColor;
-                    else
-                        canvasContext.fillStyle = onColor;
 
+                    // Increment the number of times the switch is flipped
                     flips[switch_num]++;
-                    // Color a Gree-Red scale to show how many times switeches are flipped
-                    let hsl = numberToHsl(flips[switch_num]);
-                    // canvasContext.fillStyle = `${hsl}`
-                    canvasContext.fillRect(x, y, switch_size, switch_size);
+
+                    // Redraw the switch
+                    draw_switch(switch_num);
                 }
-                
                 person++;
             }
 
-            if (person >= nswitches) {
+            if (person > nswitches) {
                 clearInterval(timer);
                 running = false;
                 // cancelAnimationFrame(timer);
@@ -120,7 +157,6 @@
             else {
                 // Setting a new time/animation frame here seems to cause JS to run 
                 // faster by skipping frames dues to multiple threads (?)
-                // Comment out to use the delay parameter from the html page
                 if (delay_ms == 0) {
                     timer2 = requestAnimationFrame(flip_switches);
                 }
@@ -169,7 +205,7 @@
             var old_x = 0;
             var old_y = 0;
             canvasContext.lineWidth = 1;
-            canvasContext.strokeStyle = '#33ff33';
+            canvasContext.strokeStyle = '#ddd';
 
             for (var s = 1; s <= sqrt_n; s++) {
                 s_sqr = s * s;
@@ -206,12 +242,15 @@
         function numberToHsl(num) {
             // Convert range 0 - 50 into Green -> Red (120 to 0 in hue)
             let min_input = 0;
-            let max_input = 50;
-            let hue0 = 160;
+            let max_input = 40;
+            let hue0 = 120;
             let hue1 = 0;
-            var hue = hue0 + (hue1 - hue0) * num / (max_input - min_input);
+            var hue = hue0 + (hue1 - hue0) * (num - 1) / (max_input - min_input);
             if (hue < hue1) hue = 0;
-            return 'hsl(' + hue + ', 100%, 50%)';
+            if (num < 2) {
+                console.log(`num=${num}  hue=${hue}`)
+            }
+            return 'hsl(' + hue + ', 100%, 40%)';
         }
 
         const showPopup = (evt) => {
@@ -259,7 +298,15 @@
             elPopup.classList.add("is-active");
         };
 
-
+        function toggle_display() {
+            show_activations = !show_activations;
+            redraw_all();
+        }
+        
+        function set_show(showtype) {
+            show_activations = (showtype == 'activations');
+            redraw_all();
+        }
 
     </script>
 
@@ -270,32 +317,94 @@
             font: 11pt consolas, calibri;
         }
 
-        .label {
-            /* float: left; */
-            padding-right: 10px;
+        a {
+            color: #3cc052;
         }
 
-        #factors {
-            max-width: 600px;
-            overflow-wrap: break-word;
+        #actionpanel {
+            display: grid;
+            grid-template-columns: 300px 220px 1fr;
+            column-gap: 10px;
+            background-color: #333;
+            padding: 10px;
+            margin-bottom: 10px;
         }
 
-        #color {
-            width: 50px;
+        #inputpanel {
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            column-gap: 10px;
+            max-width: 270px;
+            row-gap: 2px;
         }
 
-        td {
-            border: 1px solid #aaa;
+        #buttonpanel {
+            gap: 5px;
+            display: grid;
+            grid-template-areas:
+            'btn1 btn1'
+            'btn2 btn2'
+            'a a '
+            'txt  sel'
+            ;    
+            max-width: 300px;
         }
 
-        table {
-            font-size: 10pt;
-            border-collapse: separate;
-            border-spacing: 0px;
-            border-collapse: expression('separate', cellSpacing='0px');
+        #start_btn {
+            grid-area: btn1;
+        } 
+
+        #pause_btn {
+            grid-area: btn2;
+        }
+
+        #hot_lbl {
+            grid-area: txt;
+            display: flex;           /* establish flex container */
+            flex-direction: column;  /* make main axis vertical */
+            justify-content: center; /* center items vertically */
+        }
+
+        #hot_select{
+            grid-area: sel;
+            display: flex;
+            justify-content: right;
+        }
+
+        #textpanel {
+            display: inline;
+            margin-left: 30px;
+            padding: 5px;
+            background-color: #202020;
+        }
+
+        input,
+        button {
+            font: 11pt consolas, calibri;
+            border-radius: 10px;
+        }
+
+        input {
+            background-color: #dddddd;
+            border-radius: 2px;
+            border: 1px solid #767676;
+            color: #333333;
+        }
+
+        #person_lbl {
+            margin-right: 0.5em;
+            display: flex;
+        }
+
+        button {
+            background-color: rgb(145, 33, 33);
+            color: white;
+            min-height: 35px;
         }
 
         .popup {
+            font-size: 10pt;
+            border-collapse: collapse;            
             position: absolute;
             background: #333333;
             visibility: hidden;
@@ -308,40 +417,81 @@
             visibility: visible;
             pointer-events: auto;
         }
-
-        #myform {
-            margin: 0.5em 0 0.5em 0;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            max-width: 2em;
-            gap: 0.5em
+        
+        #clicktable {
+            border-collapse: collapse;
+        }
+        
+        #clicktable td {
+            border: 1px solid #aaa;
+            padding: 0.1em 0.5em 0.1em 0.5em ;
         }
 
-        input,
-        button {
-            font: 11pt consolas, calibri;
+        #factors {
+            max-width: 600px;
+            overflow-wrap: break-word;
         }
 
-        input {
-            text-align: right;
-            max-width: 16em;
-            background-color: #dddddd;
-            border-radius: 2px;
-            border: 1px solid #767676;
-            color: #333333;
-
+        #color {
+            width: 50px;
         }
 
-        #personid {
-            border: none;
-            pointer-events:none;
+        /* Toggle Switch */
+        .switch {
+        position: relative;
+        display: inline-block;
+        justify-content: right;
+        width: 54px;
+        height: 28px;
         }
 
-        button {
-            display: inline;
-            float: right;
-            color: white;
-            background-color: rgb(145, 33, 33);
+        .switch input {display:none;}
+
+        .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #666;
+        -webkit-transition: .4s;
+        transition: .4s;
+        }
+
+        .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        }
+
+        input:checked + .slider {
+        background-color: #3cc052;
+        }
+
+        input:focus + .slider {
+        box-shadow: 0 0 1px #3cc052;
+        }
+
+        input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+        }
+        
+        /* Rounded sliders */
+        .slider.round {
+        border-radius: 34px;
+        }
+
+        .slider.round:before {
+        border-radius: 50%;
         }
     </style>
 
@@ -349,41 +499,64 @@
 
 <body>
     <h3>Switches</h3>
-    <div id="myform">
-        <label>Number of switches</label>
-        <label>Switches per row</label>
-        <label>Animation delay (ms)</label>
-        <label>Current Switcher</label>
 
-        <input id="nswitches" value="10000" required pattern="[0-9]+">
-        <input id="ncols" value="100" required pattern="[0-9]+">
-        <input id="delayms" value="10" required pattern="[0-9]+">
-        <input id="personid" readonly>
-        <button onclick="continue_animation()">Start</button>
-        <button onclick="play_pause()">Pause</button>
-        <br />
+    <div id="actionpanel">
+        <div id="inputpanel">
+            <label for="nswitches">Number of switches</label>
+            <input id="nswitches" size="9" value="10000" required pattern="[0-9]+">
+
+            <label for="ncols">Switches per row</label>
+            <input id="ncols" size="8" value="100" required pattern="[0-9]+">
+
+            <label for="delayms">Animation delay (ms)</label>
+            <input id="delayms" size="8" value="10" required pattern="[0-9]+">
+
+            <label id="person_lbl" for="personid">Current Person</label>
+            <span id="personid">0</span>
+        </div>
+
+        <div id="buttonpanel">
+            <button id="start_btn" onclick="start_animation()">Go</button>
+            <button id="pause_btn" onclick="play_pause()">Pause / Continue</button>  
+            <span id="hot_lbl">Show hot switches?</span>
+            <div id="hot_select">
+                <label class="switch">
+                    <input type="checkbox" onclick="toggle_display()">
+                    <span id="hot_slider" class="slider round"></span>
+                </label>
+            </div>
+        </div>
+
+        <div id="textpanel">
+            Inspired by Ben Sparks' <a href="https://www.youtube.com/watch?v=-UBDRX6bk-A" target="_blank">Numberphile video</a> on the switches (aka lockers) problem.
+            <br/>
+            Martin Bridge, 2023
+
+        </div>
     </div>
 
+
+    <!-- Hidden table to pop up when switch display is clicked -->
     <div id="infotable" class="popup">
-        <table>
+        <table id="clicktable"> 
             <tr>
-                <td class="label">Clicked</td>
-                <td class="data" id="clicked"></td>
+                <td class="field_name">Clicked</td>
+                <td class="data" id="clicked">55</td>
             </tr>
             <tr>
-                <td class="label">Factors</td>
-                <td class="data" id="factors"></td>
+                <td class="field_name">Factors</td>
+                <td class="data" id="factors">55</td>
             </tr>
             <tr>
-                <td class="label">Flips</td>
-                <td class="data" id="flips"></td>
+                <td class="field_name">Flips</td>
+                <td class="data" id="flips">55</td>
             </tr>
             <tr>
-                <td class="label">Debug</td>
-                <td class="data" id="debug"></td>
+                <td class="field_name">Debug</td>
+                <td class="data" id="debug">55</td>
             </tr>
             <tr>
-                <td class="label">Color</td>
+                <td class="field_name">Color</td>
                 <td class="data">
                     <div id="color">&nbsp;</div>
                 </td>
