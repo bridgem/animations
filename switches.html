@@ -5,12 +5,20 @@
 
     Inspired by Ben Sparks' Numberphile video on the switches (aka lockers) problem
     https://www.youtube.com/watch?v=-UBDRX6bk-A
+
+
+    26-may-2023     Martin Bridge   HTML inputs, play/pause, fit to window
+    31-may-2023     Martin Bridge   Show hot switches, Change delay on plan/pause
+    31-may-2023     Martin Bridge   Minor style changes
+    31-may-2023     Martin Bridge   Removed debug from popup
+    31-may-2023     Martin Bridge   Added gap between switches
 -->
 
 <head>
     <script>
         /* TODO
             Separately selectable switch size vs auto size  (dependent input fields)
+            Prevent canvas size exceeding maximum dimensions
         */
         var canvas;
         var canvasContext;
@@ -21,14 +29,16 @@
         var person;
         var nswitches;
         var switch_size;
+        var switch_gap = 1;
         var switches;
         var flips;
         var delay_ms;
         var show_activations = false;  // Can display #activations or switch state
+        var show_info = false;  // show info popup
         var timer = 0;
         var running = true;
         onColor = '#33dd00';
-        offColor = '#111111';
+        offColor = '#333333';
 
         const el = (sel, par) => (par || document).querySelector(sel);
 
@@ -37,27 +47,26 @@
             // Note: Maximum canvas dimension 32,767 x 32,767
             // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
 
-            cols = el('#ncols').value;
-            nswitches = el('#nswitches').value;
-            delay_ms = el('#delayms').value;
+            cols = parseInt(el('#ncols').value);
+            nswitches = parseInt(el('#nswitches').value);
+            delay_ms = parseInt(el('#delayms').value);
+            switch_gap = parseInt(el('#sw_gap').value);
 
             console.log(`cols = ${cols}`);
             console.log(`nswitches = ${nswitches}`);
 
-
             // Last row could be incomplete
             if (nswitches % cols == 0)
-                rows= nswitches / cols;
+                rows = nswitches / cols;
             else
                 rows = Math.floor(nswitches / cols) + 1;
-
 
             (switches = []).length = nswitches + 1;
             switches.fill(1);    // Faster initialisation of switches array
             (flips = []).length = nswitches + 1;
             flips.fill(0);       // No of times switch is flipped
-            
-            person = 1;
+
+            person = 0;
 
             // In case we have already been running...
             if (timer != 0) {
@@ -69,14 +78,13 @@
             canvContainer = el('#canvContainer');
             canvas = el('#myCanvas');
             canvas.width = canvContainer.clientWidth;
-            
 
-            switch_size = Math.floor(canvas.width / cols);
-            // switch_size = (canvas.width / cols);
-            canvas.width = cols * switch_size;
-            canvas.height = rows * switch_size;
+            switch_size = Math.floor((canvas.width - (cols - 1) * switch_gap) / cols);
 
-            console.log(`Sw Size= ${switch_size}`);
+            canvas.width = cols * (switch_size + switch_gap);
+            canvas.height = rows * (switch_size + switch_gap);
+
+            console.log(`Sw Size= ${switch_size}  canvas (w, h): ${canvas.width}, ${canvas.height}`);
             canvas = el('#myCanvas');
         }
 
@@ -102,8 +110,8 @@
 
             // Canvas starts at 0,0
             // Switches, row & col start at 1
-            x = switch_size * ((n - 1) % cols);
-            y = switch_size * Math.floor((n - 1) / cols);
+            x = (switch_size + switch_gap) * ((n - 1) % cols);
+            y = (switch_size + switch_gap) * Math.floor((n - 1) / cols);
 
             if (switches[n] == 1)
                 canvasContext.fillStyle = offColor;
@@ -121,15 +129,16 @@
 
         function redraw_all() {
             // Redraw current state of switches in case display type (state vs activations has changed)
-            for (s=1; s <= nswitches; s++)
+            for (s = 1; s <= nswitches; s++)
                 draw_switch(s);
         }
 
         function flip_switches() {
 
-            document.getElementById('personid').innerHTML = person;
-
             if (running) {
+
+                person++;
+                document.getElementById('personid').innerHTML = person;
 
                 // Flip all multiples of current person
                 for (var switch_num = person; switch_num <= nswitches; switch_num += person) {
@@ -143,10 +152,9 @@
                     // Redraw the switch
                     draw_switch(switch_num);
                 }
-                person++;
             }
 
-            if (person > nswitches) {
+            if (person >= nswitches) {
                 clearInterval(timer);
                 running = false;
                 // cancelAnimationFrame(timer);
@@ -165,8 +173,9 @@
             let rect = canvas.getBoundingClientRect();
             let x = event.clientX - rect.left;
             let y = event.clientY - rect.top;
-            col = Math.floor(x / switch_size) + 1;
-            row = Math.floor(y / switch_size) + 1;
+
+            col = Math.floor(x / (switch_size + switch_gap)) + 1;
+            row = Math.floor(y / (switch_size + switch_gap)) + 1;
 
             let switchn = (row - 1) * cols + col;
 
@@ -263,8 +272,7 @@
             // No matching popup in this page, do nothing
             if (!elPopup) return;
 
-            // Get its parent (BODY) so that we can calculate the min max
-            // available space
+            // Get its parent (BODY) so that we can calculate the min max available space
             const elParent = elPopup.parentElement;
 
             // Position:
@@ -293,10 +301,17 @@
             show_activations = !show_activations;
             redraw_all();
         }
-        
+
         function set_show(showtype) {
             show_activations = (showtype == 'activations');
             redraw_all();
+        }
+
+        function toggle_info() {
+            show_info = !show_info;
+            q = el('#info');
+            let vis = ((show_info) ? "visible" : "hidden");
+            q.style.visibility = vis;
         }
 
     </script>
@@ -333,17 +348,17 @@
             gap: 5px;
             display: grid;
             grid-template-areas:
-            'btn1 btn1'
-            'btn2 btn2'
-            'a a '
-            'txt  sel'
-            ;    
+                'btn1 btn1'
+                'btn2 btn2'
+                'a a '
+                'txt  sel'
+            ;
             max-width: 300px;
         }
 
         #start_btn {
             grid-area: btn1;
-        } 
+        }
 
         #pause_btn {
             grid-area: btn2;
@@ -351,12 +366,15 @@
 
         #hot_lbl {
             grid-area: txt;
-            display: flex;           /* establish flex container */
-            flex-direction: column;  /* make main axis vertical */
-            justify-content: center; /* center items vertically */
+            display: flex;
+            /* establish flex container */
+            flex-direction: column;
+            /* make main axis vertical */
+            justify-content: center;
+            /* center items vertically */
         }
 
-        #hot_select{
+        #hot_select {
             grid-area: sel;
             display: flex;
             justify-content: right;
@@ -396,7 +414,7 @@
 
         .popup {
             font-size: 10pt;
-            border-collapse: collapse;            
+            border-collapse: collapse;
             position: absolute;
             background: #333333;
             visibility: hidden;
@@ -409,14 +427,14 @@
             visibility: visible;
             pointer-events: auto;
         }
-        
+
         #clicktable {
             border-collapse: collapse;
         }
-        
+
         #clicktable td {
             border: 1px solid #aaa;
-            padding: 0.1em 0.5em 0.1em 0.5em ;
+            padding: 0.1em 0.5em 0.1em 0.5em;
         }
 
         #factors {
@@ -424,66 +442,76 @@
             overflow-wrap: break-word;
         }
 
-        /* #color {
-            width: 50px;
-        } */
-
         /* Toggle Switch */
         .switch {
-        position: relative;
-        display: inline-block;
-        justify-content: right;
-        width: 54px;
-        height: 28px;
+            position: relative;
+            display: inline-block;
+            justify-content: right;
+            width: 54px;
+            height: 28px;
         }
 
-        .switch input {display:none;}
+        .switch input {
+            display: none;
+        }
 
         .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #666;
-        -webkit-transition: .4s;
-        transition: .4s;
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #666;
+            -webkit-transition: .4s;
+            transition: .4s;
         }
 
         .slider:before {
-        position: absolute;
-        content: "";
-        height: 20px;
-        width: 20px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        -webkit-transition: .4s;
-        transition: .4s;
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
         }
 
-        input:checked + .slider {
-        background-color: #3cc052;
+        input:checked+.slider {
+            background-color: #3cc052;
         }
 
-        input:focus + .slider {
-        box-shadow: 0 0 1px #3cc052;
+        input:focus+.slider {
+            box-shadow: 0 0 1px #3cc052;
         }
 
-        input:checked + .slider:before {
-        -webkit-transform: translateX(26px);
-        -ms-transform: translateX(26px);
-        transform: translateX(26px);
+        input:checked+.slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
         }
-        
+
         /* Rounded sliders */
         .slider.round {
-        border-radius: 34px;
+            border-radius: 34px;
         }
 
         .slider.round:before {
-        border-radius: 50%;
+            border-radius: 50%;
+        }
+
+        #info {
+            visibility: hidden;
+            background-color: #024d80;
+            border: 1px dashed #dddddd;
+            margin: 20px;
+            padding: 10px;
+            position: absolute;
+            right: 0;
+            max-width: 400px;
+            cursor: pointer;
         }
     </style>
 
@@ -503,13 +531,16 @@
             <label for="delayms">Animation delay (ms)</label>
             <input id="delayms" size="8" value="10" required pattern="[0-9]+">
 
+            <label for="sw_gap">Gap (pixels)</label>
+            <input id="sw_gap" size="8" value="0" required pattern="[0-9]+">
+
             <label id="person_lbl" for="personid">Current Person</label>
             <span id="personid">0</span>
         </div>
 
         <div id="buttonpanel">
             <button id="start_btn" onclick="start_animation()">Go</button>
-            <button id="pause_btn" onclick="play_pause()">Pause / Continue</button>  
+            <button id="pause_btn" onclick="play_pause()">Pause / Continue</button>
             <span id="hot_lbl">Show hot switches?</span>
             <div id="hot_select">
                 <label class="switch">
@@ -520,17 +551,38 @@
         </div>
 
         <div id="textpanel">
-            Inspired by Ben Sparks' <a href="https://www.youtube.com/watch?v=-UBDRX6bk-A" target="_blank">Numberphile video</a> on the switches (aka lockers) problem.
-            <br/><br/><br/>
+            Inspired by Ben Sparks' <a href="https://www.youtube.com/watch?v=-UBDRX6bk-A" target="_blank">Numberphile
+                video</a> on the switches (aka lockers) problem.
+            <br /><br />
+            
+            <br />
+            This is a work-in-progress. Info <a href="#" onclick="toggle_info()">here</a>.
+            <br /><br />
             Martin Bridge, 2023
 
+            <div id="info" onclick="toggle_info()">
+                The switch display is clickable - it will show the current switch and it's factors.
+                <p>Quirks:</p>
+                <ul>
+                    <li>
+                        If the animation doesn't appear, it's likely that the required canvas size 
+                        exceeds the maximum canvas size - reduce the number of switches, or increase the switches per row.
+                    </li>
+                </ul>
+                <p>
+                    Feedback welcome: <a href="https://github.com/bridgem/animations" target="_blank">
+                    https://github.com/bridgem/animations</a>
+                </p>
+                <p>
+                </p>
+                    Click this box to dismiss
+            </div>
         </div>
     </div>
 
-
     <!-- Hidden table to pop up when switch display is clicked -->
     <div id="infotable" class="popup">
-        <table id="clicktable"> 
+        <table id="clicktable">
             <tr>
                 <td class="field_name">Clicked</td>
                 <td class="data" id="clicked">55</td>
