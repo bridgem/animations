@@ -12,6 +12,7 @@
     31-may-2023     Martin Bridge   Minor style changes
     31-may-2023     Martin Bridge   Removed debug from popup
     31-may-2023     Martin Bridge   Added gap between switches
+    01-jun-2023     Martin Bridge   Popup info box
 -->
 
 <head>
@@ -33,8 +34,8 @@
         var switches;
         var flips;
         var delay_ms;
-        var show_activations = false;  // Can display #activations or switch state
-        var show_info = false;  // show info popup
+        var show_activations = false;  // Display #activations instead of switch state
+        var show_info = false;         // Show info popup
         var timer = 0;
         var running = true;
         onColor = '#33dd00';
@@ -118,7 +119,7 @@
             else
                 canvasContext.fillStyle = onColor;
 
-            // Color a Green-Red scale to show how many times switeches are flipped
+            // Color a Green-Red scale to show how many times switches are flipped
             if (show_activations) {
                 hsl = numberToHsl(flips[n]);
                 canvasContext.fillStyle = `${hsl}`
@@ -390,7 +391,6 @@
         input,
         button {
             font: 11pt consolas, calibri;
-            border-radius: 10px;
         }
 
         input {
@@ -409,7 +409,7 @@
             background-color: #007acc;
             border-color: #4d4d4d;
             color: white;
-            min-height: 32px;
+            /* min-height: 32px; */
         }
 
         .popup {
