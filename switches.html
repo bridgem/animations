@@ -13,6 +13,7 @@
     31-may-2023     Martin Bridge   Removed debug from popup
     31-may-2023     Martin Bridge   Added gap between switches
     01-jun-2023     Martin Bridge   Popup info box
+    18-jun-2023     Martin Bridge   Centre the canvas
 -->
 
 <head>
@@ -42,7 +43,7 @@
         var timer = 0;
         var running = true;
         onColor = '#33dd00';
-        offColor = '#333333';
+        offColor = '#303030';
 
         const el = (sel, par) => (par || document).querySelector(sel);
 
@@ -173,6 +174,9 @@
 
         }
 
+        /*
+        * Populate the usually hidden data table when a switch is clicked
+        */
         function showData(event) {
             let rect = canvas.getBoundingClientRect();
             let x = event.clientX - rect.left;
@@ -203,6 +207,9 @@
             a = pixelData[3];
         }
 
+        /* 
+        * A test function to directly plot the square numbers on the grid
+        */
         function squareNumbers(lines = false) {
             let sqrt_n = Math.sqrt(nswitches);
 
@@ -257,6 +264,9 @@
             return 'hsl(' + hue + ', 100%, 40%)';
         }
 
+        /*
+        * Pop up the data table
+        */
         const showPopup = (evt) => {
             // Get clicked target
             const elTarget = evt.target;
@@ -297,7 +307,6 @@
                 left: `${x}px`,
                 top: `${y}px`,
             });
-            // showData(evt);
             elPopup.classList.add("is-active");
         };
 
@@ -329,6 +338,15 @@
 
         a {
             color: #00dfff;
+        }
+
+        #canvContainer {
+            width: 100%;
+            text-align: center;
+        }
+
+        #myCanvas {
+            display: inline;
         }
 
         #actionpanel {
