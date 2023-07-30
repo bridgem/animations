@@ -17,9 +17,18 @@
 -->
 
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GF0VL3FQMY"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-GF0VL3FQMY');
+    </script>
     <script>
         /* TODO
-            Separately selectable switch size vs auto size  (dependent input fields)
+            Separately selectable switch size vs auto size (dependent input fields)
             Prevent canvas size exceeding maximum dimensions
             Add switch numbers when size allows
             Put #flips so far back into popup
@@ -65,6 +74,10 @@
                 rows = nswitches / cols;
             else
                 rows = Math.floor(nswitches / cols) + 1;
+
+            // If supplied as rows & cols
+            // rows = parseInt(el('#nrows').value);
+            // nswitches = rows * cols;
 
             (switches = []).length = nswitches + 1;
             switches.fill(1);    // Faster initialisation of switches array
@@ -543,6 +556,13 @@
 
     <div id="actionpanel">
         <div id="inputpanel">
+
+            <!-- <label for="nrows">Rows</label>
+            <input id="nrows" size="9" value="10" required pattern="[0-9]+">
+            <label for="ncols">Cols</label>
+            <input id="ncols" size="9" value="10" required pattern="[0-9]+"> -->
+
+            
             <label for="nswitches">Number of switches</label>
             <input id="nswitches" size="9" value="10000" required pattern="[0-9]+">
 
@@ -553,7 +573,7 @@
             <input id="delayms" size="8" value="10" required pattern="[0-9]+">
 
             <label for="sw_gap">Gap (pixels)</label>
-            <input id="sw_gap" size="8" value="0" required pattern="[0-9]+">
+            <input id="sw_gap" size="8" value="1" required pattern="[0-9]+">
 
             <label id="person_lbl" for="personid">Current Person</label>
             <span id="personid">0</span>
@@ -575,7 +595,7 @@
             Inspired by Ben Sparks' <a href="https://www.youtube.com/watch?v=-UBDRX6bk-A" target="_blank">Numberphile
                 video</a> on the switches (aka lockers) problem.
             <br /><br />
-            
+
             <br />
             This is a work-in-progress. Info <a href="#" onclick="toggle_info()">here</a>.
             <br /><br />
@@ -586,8 +606,9 @@
                 <p>Quirks:</p>
                 <ul>
                     <li>
-                        If the animation doesn't appear, it's likely that the required canvas size 
-                        exceeds the maximum canvas size - reduce the number of switches, or increase the switches per row. (I need to fix this)
+                        If the animation doesn't appear, it's likely that the required canvas size
+                        exceeds the maximum canvas size - reduce the number of switches, or increase the switches per
+                        row. (I need to fix this)
                         <br>
                         e.g. for 1,000,000 switches, use 1,000 per row
                     </li>
@@ -596,9 +617,7 @@
                     Feedback welcome: <a href="https://github.com/bridgem/animations" target="_blank">
                     https://github.com/bridgem/animations</a>
                 </p>
-                <p>
-                </p>
-                    Click this box to dismiss
+                Click this box to dismiss
             </div>
         </div>
     </div>
@@ -621,5 +640,4 @@
         <canvas id="myCanvas" width="1" height="1"></canvas>
     </div>
 </body>
-
 </html>
