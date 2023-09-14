@@ -7,4 +7,4 @@ An animation of the switches (aka locker) problem inspired by [Ben Sparks' Numbe
 ### Sierpinski Triangle
 Animation of drawing a Sierpinski Triangle using the Chaos method.
 
-[Run sierpinski](https://bridgem.github.io/animations/sierpinkski.html)
+[Run sierpinski](https://bridgem.github.io/animations/sierpinski.html)
