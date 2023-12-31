@@ -16,125 +16,130 @@
     05-sep-2023     Martin Bridge   Created
 -->
 <head>
-    <style>
-        body {
-            background-color: #111111;
-            color: #dddddd;
-            font: 11pt consolas, calibri, "SF Pro";
-        }
-    
-        #canvContainer {
-            width: 100%;
-            text-align: center;
-        }
-    
-        #myCanvas {
-            display: inline;
-        }
+<link href="buttons.css" media="all" rel="stylesheet" type="text/css" />
+<link href="main.css" media="all" rel="stylesheet" type="text/css" />
+<style>
+    #canvContainer {
+        width: 100%;
+        text-align: center;
+    }
 
-        button {
-            font: 11pt consolas, calibri;
-        }
-    
-        button {
-            background-color: #007acc;
-            border-color: #4d4d4d;
-            color: white;
-        }
+    #myCanvas {
+        display: inline;
+    }
+</style>
+<script>
+    var canvas;
+    var canvasContext;
+    const bg_color = '#111111';
+    const dot_color = '#33FF33';
+    // const line_color = '#ff3333';
+    const line_color = "rgb(255, 0, 0, 0.5)";
+    var origin_canv_x, origin_canv_y;
+    const dot_size = 1;
+    const canv_margin = 0; dot_size * 3;
 
-    </style>
-    <script>
-        var canvas;
-        var canvasContext;
-        const bg_color = '#111111';
-        const dot_color = '#33FF33';
-        var origin_canv_x, origin_canv_y;
-        const dot_size = 1;
-        const canv_margin = 0; dot_size * 3;
+    var x_old, y_old;
+    var n_iter = 0;
+    var max_iter = 500000;
+    var pts_at_a_time = 100;
+    var timer;
+    var vertices = [];
 
-        var x_old, y_old;
-        var n_iter = 0;
-        var max_iter = 500000;
-        var pts_at_a_time = 100;
-        var timer;
-        var vertices = [];
+    function canvas_dot(canv_x, canv_y) {
+        ctx.fillStyle = dot_color;
 
-        function canvas_dot(canv_x, canv_y) {
-            ctx.fillStyle = dot_color;
+        canv_x -= dot_size / 2;
+        canv_y -= dot_size / 2;
+        ctx.fillRect(canv_x, canv_y, dot_size, dot_size);
+    }
 
-            canv_x -= dot_size / 2;
-            canv_y -= dot_size / 2;
-            ctx.fillRect(canv_x, canv_y, dot_size, dot_size);
-        }
+    function draw_point() {
+            // Plot mid-point between old point and a random vertex
+            // console.log(`B-C point x,y = ${x},${y}  min_x, max_x = ${min_x},${max_x}`);
 
-        function draw_point() {
-                // Plot mid-point between old point and a random vertex
-                // console.log(`B-C point x,y = ${x},${y}  min_x, max_x = ${min_x},${max_x}`);
+            // Many points per animation frame to speed up render
+            for (i=0; i <= pts_at_a_time; i++) {
 
-                // Many points per animation frame to speed up render
-                for (i=0; i <= pts_at_a_time; i++) {
+                vtx_num = Math.floor(Math.random() * vertices.length);
+                vertex = vertices[vtx_num];
+                
+                x_mid = Math.floor((vertex.canv_x + x_old) / 2);
+                y_mid = Math.floor((vertex.canv_y + y_old) / 2);
 
-                    vtx_num = Math.floor(Math.random() * vertices.length);
-                    vertex = vertices[vtx_num];
-                    
-                    x_mid = (vertex.canv_x + x_old) / 2;
-                    y_mid = (vertex.canv_y + y_old) / 2;
-                    
-                    canvas_dot(x_mid, y_mid);
-                    
-                    x_old = x_mid;
-                    y_old = y_mid;                  
-                }
-                n_iter++;
-                    
-                if (n_iter >= max_iter) clearInterval(timer);
-        }
+                // dataURL = canvas.toDataURL("image/png");
 
-        function add_vertex(x, y) {
-            vtx = {canv_x: x, canv_y: y}
-            vertices.push(vtx)
-        }
+                // ctx.lineWidth = 1;
+                // ctx.strokeStyle = line_color;
+                // ctx.beginPath();
+                // ctx.moveTo(x_old, y_old);
+                // ctx.lineTo(vertex.canv_x, vertex.canv_y);
+                // ctx.stroke();
+                // ctx.closePath();
 
-        function start_animation() {
-            console.log("START");
-            
-            canvContainer = document.getElementById('canvContainer');
-            canvas = document.getElementById('myCanvas');  
-            ctx = canvas.getContext('2d');
-            sz = Math.min()
-            canvas.width = canvContainer.clientWidth;
-            canvas.height = window.innerHeight -60;   // Kludge to cater for scroll bar :=)
 
-            console.log(`Canvas: ${canvas.width} x ${canvas.height}`);
-            console.log(`max_iter = ${max_iter} pts_at_a_time = ${pts_at_a_time}`);
+                // var imageObj = new Image();
+                // imageObj.onload = function(){
+                //     context.drawImage(this, 0, 0);
+                // };
 
-            // Origin of real world origin on canvas
-            origin_canv_x = canvas.width / 2 - canv_margin;
-            origin_canv_y = canvas.height - canv_margin;
+                // imageObj.src = dataURL;
+                
+                canvas_dot(x_mid, y_mid);
+                
+                x_old = x_mid;
+                y_old = y_mid;                  
+            }
+            n_iter++;
+                
+            if (n_iter >= max_iter) clearInterval(timer);
+    }
 
-            ctx.fillStyle = bg_color;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function add_vertex(x, y) {
+        vtx = {canv_x: x, canv_y: y}
+        vertices.push(vtx)
+    }
 
-            // Draw start Triangle
-            vertices = [];
-            add_vertex(0, canvas.height);
-            add_vertex(canvas.width * 0.5, 0);
-            add_vertex(canvas.width, canvas.height);
+    function start_animation() {
+        console.log("START");
         
-            /* Generate a random point
-               Choose random vertex
-               Calculate mid-point of point to vertex
-               draw that mid-point
-               find new midpoint from the one draawn to another random vertex
-            */
+        canvContainer = document.getElementById('canvContainer');
+        canvas = document.getElementById('myCanvas');  
+        ctx = canvas.getContext('2d');
+        sz = Math.min()
+        canvas.width = canvContainer.clientWidth;
+        canvas.height = window.innerHeight -60;   // Kludge to cater for scroll bar :=)
 
-            // first point - centre of canvas to ensure it's inside the triangle
-            x_old = Math.floor(canvas.width / 2)
-            y_old = Math.floor(canvas.height)
-            timer = setInterval(draw_point, 0);
-        }
+        console.log(`Canvas: ${canvas.width} x ${canvas.height}`);
+        console.log(`max_iter = ${max_iter} pts_at_a_time = ${pts_at_a_time}`);
 
-    </script>
+        // Origin of real world origin on canvas
+        origin_canv_x = canvas.width / 2 - canv_margin;
+        origin_canv_y = canvas.height - canv_margin;
+
+        ctx.fillStyle = bg_color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw start Triangle
+        vertices = [];
+        add_vertex(0, canvas.height);
+        add_vertex(Math.floor(canvas.width * 0.5), 0);
+        add_vertex(canvas.width, canvas.height);
+    
+        /* Generate a random point
+            Choose random vertex
+            Calculate mid-point of point to vertex
+            draw that mid-point
+            find new midpoint from the one draawn to another random vertex
+        */
+
+        // first point - centre of canvas to ensure it's inside the triangle
+        x_old = Math.floor(canvas.width / 2)
+        y_old = Math.floor(canvas.height)
+        timer = setInterval(draw_point, 0);
+    }
+
+</script>
 </head>
 <body>
     <div id="buttonpanel">

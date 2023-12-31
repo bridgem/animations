@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<!-- 
+    Random Walk
+    16-Dec-2023     Martin Bridge   Created
+-->
+<!-- TODO:
+User choice for dx, dt, line width, final point dot, max iterations 
+pop-up for input parameters
+more contrast between consecutive colors (hue)
+-->
+<head>
+<link href="main.css" media="all" rel="stylesheet" type="text/css" />
+<link href="buttons.css" media="all" rel="stylesheet" type="text/css" />
+<style>
+    #canvContainer {
+        width: 100%;
+        text-align: center;
+    }
+
+    #myCanvas {
+        display: inline;
+    }
+
+    #actionpanel {
+        display: flex;
+        column-gap: 20px;
+        /* row-gap: 99px; */
+        background-color: #333;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    #inputpanel {
+        display: grid;
+        grid-template-columns: 65% 35%;
+        column-gap: 5px;
+        row-gap: 5px;
+        vertical-align: middle;
+        align-items: center;
+        /* width: 450px; */
+    }
+
+    button {
+        width: 100%;
+        margin: 5px;
+    }
+    
+    #final_select {
+        display: flex;
+        justify-content: right;
+    }
+</style>
+<script>
+    var canvas;
+    var canvasContext;
+    const bg_color = '#111111';
+    var origin_canv_x, origin_canv_y;
+    const canv_margin = 0; 
+
+    var dot_color = random_color();
+    var line_color = random_color();
+    var delay_ms;
+    var plot_type;
+    
+    var x = 0, y = 0;
+    var x_old = 0, y_old = 0;
+    var dx, dy;
+    var dot_size;
+    var line_width;
+    var n_iter = 0;
+    var max_iter = 500000;
+    var pts_at_a_time = 100;
+    var timer;
+    var running = true;
+
+    const el = (sel, par) => (par || document).querySelector(sel);
+
+    function random_color () {
+        h = Math.round(Math.random() * 255);
+        return `hsl(${h}, 100%, 50%)`;
+    }
+
+    function canvas_circle(canv_x, canv_y) {
+        ctx.fillStyle = dot_color;
+        ctx.strokeStyle = line_color;
+        ctx.lineWidth = line_width;
+        var r = Math.floor(dot_size / 2);
+
+        ctx.beginPath();
+        ctx.arc(canv_x, canv_y, r, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    function canvas_tile(canv_x, canv_y) {
+        ctx.fillStyle = dot_color;
+        canv_x -= dot_size / 2;
+        canv_y -= dot_size / 2;
+        ctx.fillRect(canv_x, canv_y, dot_size, dot_size);
+    }
+
+    function canvas_line(x1, y1, x2, y2) {
+        ctx.strokeStyle = line_color;
+        ctx.lineWidth = line_width;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+    function get_step() {
+        const pf = 0.333;
+        const pb = 0.333;
+        var step = 0;
+
+        var r = Math.random();
+        if (r <= pb) {
+            step = -1;
+        }
+        else if (r > 1-pf) {
+            step = 1;
+        }
+        return step;
+    }
+        
+
+    function walk() {
+        if (running) {
+            // Get next step
+            var xstep = get_step();
+            var ystep = get_step();
+
+            // console.log(`step = (${xstep},${ystep})`);
+            x += xstep * dx;
+            y += ystep * dy;
+            
+            el("#stepnum").innerHTML = n_iter;
+
+            // Reached the edge? Start again with a new color
+            // Or exceeded max iterations
+            if ((x > canvas.width) || (x < 0) || (y > canvas.height) || (y < 0) || (n_iter >= max_iter)) {
+                x = Math.floor(canvas.width / 2)
+                y = Math.floor(canvas.height / 2)
+                x_old = x;
+                y_old = y;
+                line_color = random_color();
+                dot_color = random_color();
+                n_iter = 0;
+            }
+
+            if (plot_type == "tile") {
+                canvas_tile(x, y);
+            }
+            else if (plot_type == "circle") {
+                canvas_circle(x, y);
+            }
+            else {
+                canvas_line(x_old, y_old, x, y);
+            }
+
+            x_old = x;
+            y_old = y
+            n_iter++;
+
+            if (delay_ms == 0) {
+                timer2 = requestAnimationFrame(walk);
+            }
+
+
+        }
+    }
+
+    function play_pause() {
+        running = !running;
+    }
+
+    function start_animation() {
+        console.log("START");
+
+        n_iter = 0;
+
+        // In case we have already been running...
+        if (timer != 0) {
+            clearInterval(timer);
+            timer = 0;
+        }
+        
+        canvContainer = document.getElementById('canvContainer');
+        canvas = document.getElementById('myCanvas');  
+        ctx = canvas.getContext('2d');
+        sz = Math.min()
+        canvas.width = canvContainer.clientWidth;
+        canvas.height = window.innerHeight -140;   // Kludge to cater for scroll bar :=)
+
+        delay_ms = parseInt(document.getElementById('delayms').value);
+        dx = parseInt(document.getElementById('step_size').value);
+        dy = dx;
+        dot_size = parseInt(document.getElementById('dot_size').value);
+        line_width = parseInt(document.getElementById('line_width').value);
+        max_iter = parseInt(document.getElementById('max_iter').value);
+
+        plot_type = document.querySelector('input[name="plot_type"]:checked').value;
+
+        console.log(`Plot Type = ${plot_type}`);
+        // console.log(`Canvas: ${canvas.width} x ${canvas.height}`);
+        // console.log(`max_iter = ${max_iter} pts_at_a_time = ${pts_at_a_time}`);
+
+        // Origin of real world origin on canvas
+        origin_canv_x = canvas.width / 2 - canv_margin;
+        origin_canv_y = canvas.height - canv_margin;
+
+        ctx.fillStyle = bg_color;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // first point - centre of canvas to ensure it's inside the triangle
+        x = Math.floor(canvas.width / 2)
+        y = Math.floor(canvas.height / 2)
+        x_old = x;
+        y_old = y;
+        line_color = random_color();
+
+        running = true;
+        timer = setInterval(walk, delay_ms);
+    }
+
+</script>
+</head>
+<body>
+    <div id="actionpanel">
+
+
+    <div id="inputpanel">
+        <label for="delayms">Max steps</label>
+        <input id="max_iter" size="8" value="200" pattern="[0-9]+">
+
+        <label for="delayms">&Delta;t (ms)</label>
+        <input id="delayms" size="8" value="10" required pattern="[0-9]+">
+
+        <label for="step_size">&Delta;x (pixels)</label>
+        <input id="step_size" size="8" value="15" required pattern="[0-9]+">
+
+        <label for="dot_size">Dot size (pixels)</label>
+        <input id="dot_size" size="8" value="14" required pattern="[0-9]+">
+
+        <label for="line_width">Line width (pixels)</label>
+        <input id="line_width" size="8" value="1" required pattern="[0-9]+">
+
+        
+        <label for="line_width">Highlight final point?</label>
+        <input type="checkbox" onclick="toggle_display()">
+        <div>Display Type: </div>
+        <div>
+            <input type="radio" id="line" name="plot_type" value="line" checked="true">
+            <label for="line">Lines</label>
+            <br/>
+            <input type="radio" id="tile" name="plot_type" value="tile" >
+            <label for="tile">Tiles</label>
+            <br/>
+            <input type="radio" id="circle" name="plot_type" value="circle" >
+            <label for="circle">Circles</label>  
+        </div>
+
+    </div>
+
+    <div id="buttonpanel">
+        <button id="start_btn" onclick="start_animation()">Go</button>
+        <br/>
+        <button id="pause_btn" onclick="play_pause()">Pause / Continue</button>
+        <br/>
+        <button id="settings_btn" onclick="popup_settings()">Settings</button>
+        <br/>
+        <span id="step">Step: <span id="stepnum"></span></span>
+    </div>
+
+
+    
+</div>
+
+    <div id="canvContainer" data-popup="#infotable">
+        <canvas id="myCanvas"></canvas>
+    </div>
+</body>
+</html>
