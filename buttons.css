@@ -1,0 +1,74 @@
+button {
+    background-color: #007acc;
+    border-color: #4d4d4d;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+  }
+
+  label, button, input {
+    font-family: Consolas, 'Courier New', monospace, calibri;
+    font-size: 11pt;
+  }
+
+
+/* https://iamkate.com/code/checkboxes-and-radio-buttons/ */
+ :root {
+    accent-color: #007acc;
+ }
+
+label {
+    margin-top: auto;
+    margin-bottom: auto;
+    padding: 0px;
+    /* border: 1px solid green; */
+}
+
+input,
+textarea,
+select {
+  border        : 1px solid #ddd;
+  border-radius : 2px;
+  background    : #fff no-repeat center center;
+  color         : #000;
+}
+
+input {
+    text-align: right;
+}
+
+:is(input, textarea, select):where(:active:not(:disabled), :focus) {
+  border-color : #696;
+  outline      : none;
+}
+
+:is(input, textarea, select):disabled {
+  background : #eee;
+  color      : #000;
+}
+
+input:where([type="checkbox"], [type="radio"]) {
+  -webkit-appearance : none;
+  appearance         : none;
+  width              : 22px;
+  height             : 22px;
+  /* margin             : calc(0.75em - 11px) 0.25rem 0 0; */
+  margin             : 3px;
+  vertical-align     : top;
+}
+
+input[type="radio"] {
+  border-radius : 50%;
+  margin-top: -1px;
+  vertical-align: middle;
+}
+
+input[type="checkbox"]:checked {
+  background-image : url('checkbox.svg');
+}
+
+input[type="radio"]:checked {
+  background-image : url('radio.svg');
+}

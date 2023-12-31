@@ -1,0 +1,23 @@
+body {
+    background-color: #111111;
+    color: #dddddd;
+    font-family: Consolas, 'Courier New', monospace, calibri;
+    font-size: 11pt;
+}
+
+a {
+    color: #00dfff;
+}
+
+/* Popup info panel */
+.info {
+    visibility: hidden;
+    background-color: #024d80;
+    border: 1px dashed #dddddd;
+    margin: 20px;
+    padding: 10px;
+    position: absolute;
+    right: 0;
+    max-width: 400px;
+    cursor: pointer;
+}

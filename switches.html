@@ -14,540 +14,434 @@
     31-may-2023     Martin Bridge   Added gap between switches
     01-jun-2023     Martin Bridge   Popup info box
     18-jun-2023     Martin Bridge   Centre the canvas
+    30-dec-2023     Martin Bridge   Move common style to separate files
 -->
 
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GF0VL3FQMY"></script>
-    <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+<link href="main.css" media="all" rel="stylesheet" type="text/css" />
+<link href="buttons.css" media="all" rel="stylesheet" type="text/css" />
+<style>
+#canvContainer {
+    width: 100%;
+    text-align: center;
+}
 
-    gtag('config', 'G-GF0VL3FQMY');
-    </script>
-    <script>
-        /* TODO
-            Separately selectable switch size vs auto size (dependent input fields)
-            Prevent canvas size exceeding maximum dimensions
-            Add switch numbers when size allows
-            Put #flips so far back into popup
-            Problem: If gap * cols is greater than window width, things go wrong!!
-        */
-        var canvas;
-        var canvasContext;
-        var elPopup;
-        var elBody;
-        var cols;
-        var rows;
-        var person;
-        var nswitches;
-        var switch_size;
-        var switch_gap = 1;
-        var switches;
-        var flips;
-        var delay_ms;
-        var show_activations = false;  // Display #activations instead of switch state
-        var show_info = false;         // Show info popup
-        var timer = 0;
-        var running = true;
-        onColor = '#33dd00';
-        offColor = '#303030';
+#myCanvas {
+    display: inline;
+}
 
-        const el = (sel, par) => (par || document).querySelector(sel);
+#actionpanel {
+    display: grid;
+    grid-template-columns: 300px 220px 1fr;
+    column-gap: 10px;
+    background-color: #333;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#inputpanel {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    column-gap: 10px;
+    max-width: 270px;
+    row-gap: 2px;
+}
+
+#buttonpanel {
+    gap: 5px;
+    display: grid;
+    grid-template-areas:
+        'btn1 btn1'
+        'btn2 btn2'
+        'a a '
+        'txt  sel'
+    ;
+    max-width: 300px;
+}
+
+#start_btn {
+    grid-area: btn1;
+}
+
+#pause_btn {
+    grid-area: btn2;
+}
+
+#hot_lbl {
+    grid-area: txt;
+    display: flex;
+    /* establish flex container */
+    flex-direction: column;
+    /* make main axis vertical */
+    justify-content: center;
+    /* center items vertically */
+}
+
+#hot_select {
+    grid-area: sel;
+    display: flex;
+    justify-content: right;
+}
+
+#textpanel {
+    display: inline;
+    margin-left: 30px;
+    padding: 5px;
+    background-color: #202020;
+}
+
+.popup {
+    font-size: 10pt;
+    border-collapse: collapse;
+    position: absolute;
+    background: #333333;
+    visibility: hidden;
+    pointer-events: none;
+    min-width: 100px;
+    padding: 5px;
+}
+
+.popup.is-active {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+#clicktable {
+    border-collapse: collapse;
+}
+
+#clicktable td {
+    border: 1px solid #aaa;
+    padding: 0.1em 0.5em 0.1em 0.5em;
+}
+
+#factors {
+    max-width: 600px;
+    overflow-wrap: break-word;
+}
+</style>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GF0VL3FQMY"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-GF0VL3FQMY');
+</script>
+<script>
+    /* TODO
+        Separately selectable switch size vs auto size (dependent input fields)
+        Prevent canvas size exceeding maximum dimensions
+        Add switch numbers when size allows
+        Put #flips so far back into popup
+        Problem: If gap * cols is greater than window width, things go wrong!!
+    */
+    var canvas;
+    var canvasContext;
+    var elPopup;
+    var elBody;
+    var cols;
+    var rows;
+    var person;
+    var nswitches;
+    var switch_size;
+    var switch_gap = 1;
+    var switches;
+    var flips;
+    var delay_ms;
+    var show_activations = false;  // Display #activations instead of switch state
+    var show_info = false;         // Show info popup
+    var timer = 0;
+    var running = true;
+    onColor = '#33dd00';
+    offColor = '#303030';
+
+    const el = (sel, par) => (par || document).querySelector(sel);
 
 
-        function init() {
-            // Note: Maximum canvas dimension 32,767 x 32,767
-            // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
+    function init() {
+        // Note: Maximum canvas dimension 32,767 x 32,767
+        // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas
 
-            cols = parseInt(el('#ncols').value);
-            nswitches = parseInt(el('#nswitches').value);
-            delay_ms = parseInt(el('#delayms').value);
-            switch_gap = parseInt(el('#sw_gap').value);
+        cols = parseInt(el('#ncols').value);
+        nswitches = parseInt(el('#nswitches').value);
+        delay_ms = parseInt(el('#delayms').value);
+        switch_gap = parseInt(el('#sw_gap').value);
 
-            console.log(`cols = ${cols}`);
-            console.log(`nswitches = ${nswitches}`);
+        // console.log(`cols = ${cols}`);
+        // console.log(`nswitches = ${nswitches}`);
 
-            // Last row could be incomplete
-            if (nswitches % cols == 0)
-                rows = nswitches / cols;
-            else
-                rows = Math.floor(nswitches / cols) + 1;
+        // Last row could be incomplete
+        if (nswitches % cols == 0)
+            rows = nswitches / cols;
+        else
+            rows = Math.floor(nswitches / cols) + 1;
 
-            // If supplied as rows & cols
-            // rows = parseInt(el('#nrows').value);
-            // nswitches = rows * cols;
+        // If supplied as rows & cols
+        // rows = parseInt(el('#nrows').value);
+        // nswitches = rows * cols;
 
-            (switches = []).length = nswitches + 1;
-            switches.fill(1);    // Faster initialisation of switches array
-            (flips = []).length = nswitches + 1;
-            flips.fill(0);       // No of times switch is flipped
+        (switches = []).length = nswitches + 1;
+        switches.fill(1);    // Faster initialisation of switches array
+        (flips = []).length = nswitches + 1;
+        flips.fill(0);       // No of times switch is flipped
 
-            person = 0;
+        person = 0;
 
-            // In case we have already been running...
-            if (timer != 0) {
-                clearInterval(timer);
-                timer = 0;
+        // In case we have already been running...
+        if (timer != 0) {
+            clearInterval(timer);
+            timer = 0;
+        }
+
+        elBody = el('body');
+        canvContainer = el('#canvContainer');
+        canvas = el('#myCanvas');
+        canvas.width = canvContainer.clientWidth;
+
+        switch_size = Math.floor((canvas.width - (cols - 1) * switch_gap) / cols);
+
+        canvas.width = cols * (switch_size + switch_gap);
+        canvas.height = rows * (switch_size + switch_gap);
+
+        // console.log(`Sw Size= ${switch_size}  canvas (w, h): ${canvas.width}, ${canvas.height}`);
+        canvas = el('#myCanvas');
+    }
+
+    function play_pause() {
+        running = !running;
+    }
+
+    function start_animation() {
+        init();
+
+        canvasContext = canvas.getContext('2d');
+        canvas.addEventListener('click', showData);
+        elBody.addEventListener('click', showPopup);
+
+        running = true;
+        timer = setInterval(flip_switches, delay_ms);
+
+        // A quick way to just show the squares
+        // squareNumbers(lines=true);
+    }
+
+    function draw_switch(n) {
+
+        // Canvas starts at 0,0
+        // Switches, row & col start at 1
+        x = (switch_size + switch_gap) * ((n - 1) % cols);
+        y = (switch_size + switch_gap) * Math.floor((n - 1) / cols);
+
+        if (switches[n] == 1)
+            canvasContext.fillStyle = offColor;
+        else
+            canvasContext.fillStyle = onColor;
+
+        // Color a Green-Red scale to show how many times switches are flipped
+        if (show_activations) {
+            hsl = numberToHsl(flips[n]);
+            canvasContext.fillStyle = `${hsl}`
+        }
+        canvasContext.fillRect(x, y, switch_size, switch_size);
+
+    }
+
+    function redraw_all() {
+        // Redraw current state of switches in case display type (state vs activations has changed)
+        for (s = 1; s <= nswitches; s++)
+            draw_switch(s);
+    }
+
+    function flip_switches() {
+
+        if (running) {
+
+            person++;
+            document.getElementById('personid').innerHTML = person;
+
+            // Flip all multiples of current person
+            for (var switch_num = person; switch_num <= nswitches; switch_num += person) {
+
+                // Invert the switch value
+                switches[switch_num] = 1 - switches[switch_num];
+
+                // Increment the number of times the switch is flipped
+                flips[switch_num]++;
+
+                // Redraw the switch
+                draw_switch(switch_num);
             }
-
-            elBody = el('body');
-            canvContainer = el('#canvContainer');
-            canvas = el('#myCanvas');
-            canvas.width = canvContainer.clientWidth;
-
-            switch_size = Math.floor((canvas.width - (cols - 1) * switch_gap) / cols);
-
-            canvas.width = cols * (switch_size + switch_gap);
-            canvas.height = rows * (switch_size + switch_gap);
-
-            console.log(`Sw Size= ${switch_size}  canvas (w, h): ${canvas.width}, ${canvas.height}`);
-            canvas = el('#myCanvas');
         }
 
-        function play_pause() {
-            running = !running;
+        if (person >= nswitches) {
+            clearInterval(timer);
+            running = false;
+            // cancelAnimationFrame(timer);
         }
-
-        function start_animation() {
-            init();
-
-            canvasContext = canvas.getContext('2d');
-            canvas.addEventListener('click', showData);
-            elBody.addEventListener('click', showPopup);
-
-            running = true;
-            timer = setInterval(flip_switches, delay_ms);
-
-            // A quick way to just show the squares
-            // squareNumbers(lines=true);
-        }
-
-        function draw_switch(n) {
-
-            // Canvas starts at 0,0
-            // Switches, row & col start at 1
-            x = (switch_size + switch_gap) * ((n - 1) % cols);
-            y = (switch_size + switch_gap) * Math.floor((n - 1) / cols);
-
-            if (switches[n] == 1)
-                canvasContext.fillStyle = offColor;
-            else
-                canvasContext.fillStyle = onColor;
-
-            // Color a Green-Red scale to show how many times switches are flipped
-            if (show_activations) {
-                hsl = numberToHsl(flips[n]);
-                canvasContext.fillStyle = `${hsl}`
+        else {
+            // Setting a new time/animation frame here seems to cause JS to run 
+            // faster by skipping frames dues to multiple threads (?)
+            if (delay_ms == 0) {
+                timer2 = requestAnimationFrame(flip_switches);
             }
+        }
+
+    }
+
+    /*
+    * Populate the usually hidden data table when a switch is clicked
+    */
+    function showData(event) {
+        let rect = canvas.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+
+        col = Math.floor(x / (switch_size + switch_gap)) + 1;
+        row = Math.floor(y / (switch_size + switch_gap)) + 1;
+
+        let switchn = (row - 1) * cols + col;
+
+        let sqrt_s = Math.sqrt(switchn);
+        if (Math.floor(sqrt_s) == sqrt_s)
+            sqrt = `(${sqrt_s}^2)`;
+        else
+            sqrt = '';
+
+        let ff = getFactors(switchn);
+        fstr = `${ff.numFactors}: ${ff.factorList}`;
+
+        // Write current selected switch to screen
+        document.getElementById('clicked').innerHTML = `${switchn} ${sqrt}  (r${row}, c${col})`
+        document.getElementById('factors').innerHTML = `${fstr}`
+
+        var pixelData = canvasContext.getImageData(x, y, 1, 1).data;
+        r = pixelData[0];
+        g = pixelData[1];
+        b = pixelData[2];
+        a = pixelData[3];
+    }
+
+    /* 
+    * A test function to directly plot the square numbers on the grid
+    */
+    function squareNumbers(lines = false) {
+        let sqrt_n = Math.sqrt(nswitches);
+
+        var old_x = 0;
+        var old_y = 0;
+        canvasContext.lineWidth = 1;
+        canvasContext.strokeStyle = '#ddd';
+
+        for (var s = 1; s <= sqrt_n; s++) {
+            s_sqr = s * s;
+            x = switch_size * ((s_sqr - 1) % cols);
+            y = switch_size * Math.floor((s_sqr - 1) / cols);
+            canvasContext.fillStyle = onColor;
             canvasContext.fillRect(x, y, switch_size, switch_size);
 
-        }
-
-        function redraw_all() {
-            // Redraw current state of switches in case display type (state vs activations has changed)
-            for (s = 1; s <= nswitches; s++)
-                draw_switch(s);
-        }
-
-        function flip_switches() {
-
-            if (running) {
-
-                person++;
-                document.getElementById('personid').innerHTML = person;
-
-                // Flip all multiples of current person
-                for (var switch_num = person; switch_num <= nswitches; switch_num += person) {
-
-                    // Invert the switch value
-                    switches[switch_num] = 1 - switches[switch_num];
-
-                    // Increment the number of times the switch is flipped
-                    flips[switch_num]++;
-
-                    // Redraw the switch
-                    draw_switch(switch_num);
-                }
+            if (lines) {
+                canvasContext.beginPath();
+                canvasContext.moveTo(old_x, old_y);
+                canvasContext.lineTo(x, y);
+                canvasContext.stroke();
             }
 
-            if (person >= nswitches) {
-                clearInterval(timer);
-                running = false;
-                // cancelAnimationFrame(timer);
+            old_x = x;
+            old_y = y;
+        }
+        clearInterval(timer);
+    }
+
+    function getFactors(num) {
+        let factorList = "";
+        let numFactors = 0;
+        for (let i = 1; i <= num; i++) {
+            if (num % i == 0) {
+                factorList += `${i},`;
+                numFactors++;
             }
-            else {
-                // Setting a new time/animation frame here seems to cause JS to run 
-                // faster by skipping frames dues to multiple threads (?)
-                if (delay_ms == 0) {
-                    timer2 = requestAnimationFrame(flip_switches);
-                }
-            }
-
         }
+        return { numFactors, factorList };
+    }
 
-        /*
-        * Populate the usually hidden data table when a switch is clicked
-        */
-        function showData(event) {
-            let rect = canvas.getBoundingClientRect();
-            let x = event.clientX - rect.left;
-            let y = event.clientY - rect.top;
+    function numberToHsl(num) {
+        // Convert range 0 - 50 into Green -> Red (120 to 0 in hue)
+        let min_input = 0;
+        let max_input = 40;
+        let hue0 = 120;
+        let hue1 = 0;
+        var hue = hue0 + (hue1 - hue0) * (num - 1) / (max_input - min_input);
+        if (hue < hue1) hue = 0;
+        return 'hsl(' + hue + ', 100%, 40%)';
+    }
 
-            col = Math.floor(x / (switch_size + switch_gap)) + 1;
-            row = Math.floor(y / (switch_size + switch_gap)) + 1;
+    /*
+    * Pop up the data table
+    */
+    const showPopup = (evt) => {
+        // Get clicked target
+        const elTarget = evt.target;
 
-            let switchn = (row - 1) * cols + col;
+        // Close currently open popup (if any):
+        if (elPopup) elPopup.classList.remove("is-active");
 
-            let sqrt_s = Math.sqrt(switchn);
-            if (Math.floor(sqrt_s) == sqrt_s)
-                sqrt = `(${sqrt_s}^2)`;
-            else
-                sqrt = '';
+        // Get initiator button
+        const elBtn = elTarget.closest("[data-popup]");
 
-            let ff = getFactors(switchn);
-            fstr = `${ff.numFactors}: ${ff.factorList}`;
+        // Not a valid button
+        if (!elBtn) return;
 
-            // Write current selected switch to screen
-            document.getElementById('clicked').innerHTML = `${switchn} ${sqrt}  (r${row}, c${col})`
-            document.getElementById('factors').innerHTML = `${fstr}`
+        // Get the popup
+        elPopup = el(elBtn.dataset.popup);
 
-            var pixelData = canvasContext.getImageData(x, y, 1, 1).data;
-            r = pixelData[0];
-            g = pixelData[1];
-            b = pixelData[2];
-            a = pixelData[3];
-        }
+        // No matching popup in this page, do nothing
+        if (!elPopup) return;
 
-        /* 
-        * A test function to directly plot the square numbers on the grid
-        */
-        function squareNumbers(lines = false) {
-            let sqrt_n = Math.sqrt(nswitches);
+        // Get its parent (BODY) so that we can calculate the min max available space
+        const elParent = elPopup.parentElement;
 
-            var old_x = 0;
-            var old_y = 0;
-            canvasContext.lineWidth = 1;
-            canvasContext.strokeStyle = '#ddd';
+        // Position:
+        const absX = evt.clientX + window.scrollX;
+        const absY = evt.clientY + window.scrollY;
 
-            for (var s = 1; s <= sqrt_n; s++) {
-                s_sqr = s * s;
-                x = switch_size * ((s_sqr - 1) % cols);
-                y = switch_size * Math.floor((s_sqr - 1) / cols);
-                canvasContext.fillStyle = onColor;
-                canvasContext.fillRect(x, y, switch_size, switch_size);
+        const bcrParent = elParent.getBoundingClientRect();
+        const bcrPopup = elPopup.getBoundingClientRect();
 
-                if (lines) {
-                    canvasContext.beginPath();
-                    canvasContext.moveTo(old_x, old_y);
-                    canvasContext.lineTo(x, y);
-                    canvasContext.stroke();
-                }
+        const maxX = bcrParent.width - bcrPopup.width;
+        const maxY = bcrParent.height - bcrPopup.height;
 
-                old_x = x;
-                old_y = y;
-            }
-            clearInterval(timer);
-        }
+        const x = Math.max(0, Math.min(absX, maxX));
+        const y = Math.max(0, Math.min(absY, maxY));
 
-        function getFactors(num) {
-            let factorList = "";
-            let numFactors = 0;
-            for (let i = 1; i <= num; i++) {
-                if (num % i == 0) {
-                    factorList += `${i},`;
-                    numFactors++;
-                }
-            }
-            return { numFactors, factorList };
-        }
+        // Show popup
+        Object.assign(elPopup.style, {
+            left: `${x}px`,
+            top: `${y}px`,
+        });
+        elPopup.classList.add("is-active");
+    };
 
-        function numberToHsl(num) {
-            // Convert range 0 - 50 into Green -> Red (120 to 0 in hue)
-            let min_input = 0;
-            let max_input = 40;
-            let hue0 = 120;
-            let hue1 = 0;
-            var hue = hue0 + (hue1 - hue0) * (num - 1) / (max_input - min_input);
-            if (hue < hue1) hue = 0;
-            if (num < 2) {
-                console.log(`num=${num}  hue=${hue}`)
-            }
-            return 'hsl(' + hue + ', 100%, 40%)';
-        }
+    function toggle_display() {
+        show_activations = !show_activations;
+        redraw_all();
+    }
 
-        /*
-        * Pop up the data table
-        */
-        const showPopup = (evt) => {
-            // Get clicked target
-            const elTarget = evt.target;
+    function set_show(showtype) {
+        show_activations = (showtype == 'activations');
+        redraw_all();
+    }
 
-            // Close currently open popup (if any):
-            if (elPopup) elPopup.classList.remove("is-active");
+    function toggle_info() {
+        show_info = !show_info;
+        q = document.getElementById("info");
+        let vis = ((show_info) ? "visible" : "hidden");
+        q.style.visibility = vis;
+    }
 
-            // Get initiator button
-            const elBtn = elTarget.closest("[data-popup]");
-
-            // Not a valid button
-            if (!elBtn) return;
-
-            // Get the popup
-            elPopup = el(elBtn.dataset.popup);
-
-            // No matching popup in this page, do nothing
-            if (!elPopup) return;
-
-            // Get its parent (BODY) so that we can calculate the min max available space
-            const elParent = elPopup.parentElement;
-
-            // Position:
-            const absX = evt.clientX + window.scrollX;
-            const absY = evt.clientY + window.scrollY;
-
-            const bcrParent = elParent.getBoundingClientRect();
-            const bcrPopup = elPopup.getBoundingClientRect();
-
-            const maxX = bcrParent.width - bcrPopup.width;
-            const maxY = bcrParent.height - bcrPopup.height;
-
-            const x = Math.max(0, Math.min(absX, maxX));
-            const y = Math.max(0, Math.min(absY, maxY));
-
-            // Show popup
-            Object.assign(elPopup.style, {
-                left: `${x}px`,
-                top: `${y}px`,
-            });
-            elPopup.classList.add("is-active");
-        };
-
-        function toggle_display() {
-            show_activations = !show_activations;
-            redraw_all();
-        }
-
-        function set_show(showtype) {
-            show_activations = (showtype == 'activations');
-            redraw_all();
-        }
-
-        function toggle_info() {
-            show_info = !show_info;
-            q = el('#info');
-            let vis = ((show_info) ? "visible" : "hidden");
-            q.style.visibility = vis;
-        }
-
-    </script>
-
-    <style type="text/css">
-        body {
-            background-color: #111111;
-            color: #dddddd;
-            font: 11pt consolas, calibri, "SF Pro";
-        }
-
-        a {
-            color: #00dfff;
-        }
-
-        #canvContainer {
-            width: 100%;
-            text-align: center;
-        }
-
-        #myCanvas {
-            display: inline;
-        }
-
-        #actionpanel {
-            display: grid;
-            grid-template-columns: 300px 220px 1fr;
-            column-gap: 10px;
-            background-color: #333;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-
-        #inputpanel {
-            display: grid;
-            grid-template-columns: 3fr 1fr;
-            column-gap: 10px;
-            max-width: 270px;
-            row-gap: 2px;
-        }
-
-        #buttonpanel {
-            gap: 5px;
-            display: grid;
-            grid-template-areas:
-                'btn1 btn1'
-                'btn2 btn2'
-                'a a '
-                'txt  sel'
-            ;
-            max-width: 300px;
-        }
-
-        #start_btn {
-            grid-area: btn1;
-        }
-
-        #pause_btn {
-            grid-area: btn2;
-        }
-
-        #hot_lbl {
-            grid-area: txt;
-            display: flex;
-            /* establish flex container */
-            flex-direction: column;
-            /* make main axis vertical */
-            justify-content: center;
-            /* center items vertically */
-        }
-
-        #hot_select {
-            grid-area: sel;
-            display: flex;
-            justify-content: right;
-        }
-
-        #textpanel {
-            display: inline;
-            margin-left: 30px;
-            padding: 5px;
-            background-color: #202020;
-        }
-
-        input,
-        button {
-            font: 11pt consolas, calibri;
-        }
-
-        input {
-            background-color: #dddddd;
-            border-radius: 2px;
-            border: 1px solid #767676;
-            color: #333333;
-        }
-
-        #person_lbl {
-            margin-right: 0.5em;
-            display: flex;
-        }
-
-        button {
-            background-color: #007acc;
-            border-color: #4d4d4d;
-            color: white;
-            /* min-height: 32px; */
-        }
-
-        .popup {
-            font-size: 10pt;
-            border-collapse: collapse;
-            position: absolute;
-            background: #333333;
-            visibility: hidden;
-            pointer-events: none;
-            min-width: 100px;
-            padding: 5px;
-        }
-
-        .popup.is-active {
-            visibility: visible;
-            pointer-events: auto;
-        }
-
-        #clicktable {
-            border-collapse: collapse;
-        }
-
-        #clicktable td {
-            border: 1px solid #aaa;
-            padding: 0.1em 0.5em 0.1em 0.5em;
-        }
-
-        #factors {
-            max-width: 600px;
-            overflow-wrap: break-word;
-        }
-
-        /* Toggle Switch */
-        .switch {
-            position: relative;
-            display: inline-block;
-            justify-content: right;
-            width: 54px;
-            height: 28px;
-        }
-
-        .switch input {
-            display: none;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #666;
-            -webkit-transition: .4s;
-            transition: .4s;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            -webkit-transition: .4s;
-            transition: .4s;
-        }
-
-        input:checked+.slider {
-            background-color: #3cc052;
-        }
-
-        input:focus+.slider {
-            box-shadow: 0 0 1px #3cc052;
-        }
-
-        input:checked+.slider:before {
-            -webkit-transform: translateX(26px);
-            -ms-transform: translateX(26px);
-            transform: translateX(26px);
-        }
-
-        /* Rounded sliders */
-        .slider.round {
-            border-radius: 34px;
-        }
-
-        .slider.round:before {
-            border-radius: 50%;
-        }
-
-        #info {
-            visibility: hidden;
-            background-color: #024d80;
-            border: 1px dashed #dddddd;
-            margin: 20px;
-            padding: 10px;
-            position: absolute;
-            right: 0;
-            max-width: 400px;
-            cursor: pointer;
-        }
-    </style>
+</script>
 
 </head>
 
@@ -585,8 +479,8 @@
             <span id="hot_lbl">Show hot switches?</span>
             <div id="hot_select">
                 <label class="switch">
-                    <input type="checkbox" onclick="toggle_display()">
-                    <span id="hot_slider" class="slider round"></span>
+                    <input type="checkbox" id="hot_select" onclick="toggle_display()">
+                    <span id="hot_slider" class="xslider round"></span>
                 </label>
             </div>
         </div>
@@ -601,7 +495,7 @@
             <br /><br />
             Martin Bridge, 2023
 
-            <div id="info" onclick="toggle_info()">
+            <div id="info" class="info" onclick="toggle_info()">
                 The switch display is clickable - it will show the current switch and it's factors.
                 <p>Quirks:</p>
                 <ul>
