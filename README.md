@@ -8,3 +8,8 @@ An animation of the switches (aka locker) problem inspired by [Ben Sparks' Numbe
 Animation of drawing a Sierpinski Triangle using the Chaos method.
 
 [Run sierpinski](https://bridgem.github.io/animations/sierpinski.html)
+
+### Random Walk
+Simple Animation of a 2D random walk
+
+[Run random walk](https://bridgem.github.io/animations/random_walk.html)
