@@ -13,68 +13,100 @@ more contrast between consecutive colors (hue)
 <link href="main.css" media="all" rel="stylesheet" type="text/css" />
 <link href="buttons.css" media="all" rel="stylesheet" type="text/css" />
 <style>
-    #canvContainer {
-        width: 100%;
-        text-align: center;
-    }
+#canvContainer {
+    width: 100%;
+    text-align: center;
+}
 
-    #myCanvas {
-        display: inline;
-    }
+#myCanvas {
+    display: inline;
+}
 
-    #actionpanel {
-        display: flex;
-        column-gap: 20px;
-        /* row-gap: 99px; */
-        background-color: #333;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
+#actionpanel {
+    display: flex;
+    column-gap: 20px;
+    /* row-gap: 99px; */
+    background-color: #333;
+    padding: 10px;
+    margin-bottom: 10px;
+}
 
-    #inputpanel {
-        display: grid;
-        grid-template-columns: 65% 35%;
-        column-gap: 5px;
-        row-gap: 5px;
-        vertical-align: middle;
-        align-items: center;
-        /* width: 450px; */
-    }
+#inputpanel {
+    display: grid;
+    grid-template-columns: 65% 35%;
+    column-gap: 5px;
+    row-gap: 5px;
+    vertical-align: middle;
+    align-items: center;
+    /* width: 450px; */
+}
 
-    button {
-        width: 100%;
-        margin: 5px;
-    }
-    
-    #final_select {
-        display: flex;
-        justify-content: right;
-    }
+#textpanel {
+    display: inline;
+    margin-left: 30px;
+    padding: 5px;
+    background-color: #202020;
+}
+
+button {
+    width: 100%;
+    margin: 5px;
+}
 </style>
-<script>
+<script>delta_t
     var canvas;
     var canvasContext;
     const bg_color = '#111111';
     var origin_canv_x, origin_canv_y;
     const canv_margin = 0; 
 
-    var dot_color = random_color();
-    var line_color = random_color();
-    var delay_ms;
-    var plot_type;
-    
+    // Current and previous coordinates
     var x = 0, y = 0;
     var x_old = 0, y_old = 0;
-    var dx, dy;
-    var dot_size;
-    var line_width;
-    var n_iter = 0;
-    var max_iter = 500000;
-    var pts_at_a_time = 100;
+
+    // Main loop variables    
+    var step_num = 0;
     var timer;
     var running = true;
 
+    // User input parameters
+    var max_steps = 500000;
+    var delta_t;           // Time step
+    var dx, dy;            // Step sizes equal dx and dy for now
+    var dot_size;          // Tile or circle size
+    var half_dot_size;     // Half dot size (for offset and radius
+    var line_width;        // Line width plot
+    var final_point_only;  // Show final point (instead of plotting whole walk)
+    var plot_type;         // Plot type: line. tile or circle
+    
+    // Get element from css selector
     const el = (sel, par) => (par || document).querySelector(sel);
+
+
+    function final_point_plot_selected() {
+        // If only plotting final point, then speed things up by setting delta_t to zero
+        // Also, change grid to smaller values
+        final_point_only = el('#final_point').checked;
+        if (final_point_only) {
+            el('#delta_t').value = "0";
+            el('#step_size').value = "3";
+            el('#dot_size').value = "2";
+        }
+    }
+
+
+    function get_params() {
+        // Assign input parameters from HTML to global variables
+        max_steps = parseInt(el('#max_iter').value);
+        delta_t = parseInt(el('#delta_t').value);
+        dx = parseInt(el('#step_size').value);
+        dy = dx;
+        dot_size = parseInt(el('#dot_size').value);
+        half_dot_size = (dot_size == 1) ? 1 : Math.floor(dot_size / 2);
+        line_width = parseInt(el('#line_width').value);
+        final_point_only = el('#final_point').checked;
+        plot_type = el('input[name="plot_type"]:checked').value;
+    }
 
     function random_color () {
         h = Math.round(Math.random() * 255);
@@ -82,27 +114,22 @@ more contrast between consecutive colors (hue)
     }
 
     function canvas_circle(canv_x, canv_y) {
-        ctx.fillStyle = dot_color;
-        ctx.strokeStyle = line_color;
-        ctx.lineWidth = line_width;
-        var r = Math.floor(dot_size / 2);
-
         ctx.beginPath();
-        ctx.arc(canv_x, canv_y, r, 0, 2 * Math.PI);
+        if (half_dot_size == 1) {  // Radius 1
+            ctx.fillRect(canv_x, canv_y, 1, 1);
+        } else {
+            ctx.arc(canv_x, canv_y, half_dot_size, 0, 2 * Math.PI);
+        }
         ctx.fill();
     }
 
     function canvas_tile(canv_x, canv_y) {
-        ctx.fillStyle = dot_color;
-        canv_x -= dot_size / 2;
-        canv_y -= dot_size / 2;
+        canv_x -= half_dot_size;
+        canv_y -= half_dot_size;
         ctx.fillRect(canv_x, canv_y, dot_size, dot_size);
     }
 
     function canvas_line(x1, y1, x2, y2) {
-        ctx.strokeStyle = line_color;
-        ctx.lineWidth = line_width;
-        ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -110,18 +137,19 @@ more contrast between consecutive colors (hue)
     }
 
     function get_step() {
-        const pf = 0.333;
-        const pb = 0.333;
-        var step = 0;
-
+        const pf = 0.333;       // p(move forward)
+        const pb = 0.333;       // p(move back)
+        
+        // p(no move) = 1 -pf -pb   
         var r = Math.random();
         if (r <= pb) {
-            step = -1;
+            return -1;
         }
-        else if (r > 1-pf) {
-            step = 1;
+        else if (r > 1 - pf) {
+            return 1;
+        } else {
+            return 0;
         }
-        return step;
     }
         
 
@@ -135,39 +163,46 @@ more contrast between consecutive colors (hue)
             x += xstep * dx;
             y += ystep * dy;
             
-            el("#stepnum").innerHTML = n_iter;
+            el("#stepnum").innerHTML = step_num;
 
             // Reached the edge? Start again with a new color
             // Or exceeded max iterations
-            if ((x > canvas.width) || (x < 0) || (y > canvas.height) || (y < 0) || (n_iter >= max_iter)) {
+
+            if ((final_point_only) && (step_num >= max_steps)) {
+                // Plot the end point of the random walk
+                ctx.fillStyle = "white";
+                canvas_circle(x, y);
+            }
+
+            if ((x > canvas.width) || (x < 0) || (y > canvas.height) || (y < 0) || (step_num >= max_steps)) {
                 x = Math.floor(canvas.width / 2)
                 y = Math.floor(canvas.height / 2)
                 x_old = x;
                 y_old = y;
-                line_color = random_color();
-                dot_color = random_color();
-                n_iter = 0;
+                ctx.fillStyle = random_color();
+                ctx.strokeStyle = random_color();
+                step_num = 0;
             }
 
-            if (plot_type == "tile") {
-                canvas_tile(x, y);
-            }
-            else if (plot_type == "circle") {
-                canvas_circle(x, y);
-            }
-            else {
-                canvas_line(x_old, y_old, x, y);
-            }
+            if (!final_point_only) {
+                if (plot_type == "tile") {
+                    canvas_tile(x, y);
+                }
+                else if (plot_type == "circle") {
+                    canvas_circle(x, y);
+                }
+                else {
+                    canvas_line(x_old, y_old, x, y);
+                }
+            } 
 
             x_old = x;
             y_old = y
-            n_iter++;
+            step_num++;
 
-            if (delay_ms == 0) {
+            if (delta_t == 0) {
                 timer2 = requestAnimationFrame(walk);
             }
-
-
         }
     }
 
@@ -178,33 +213,22 @@ more contrast between consecutive colors (hue)
     function start_animation() {
         console.log("START");
 
-        n_iter = 0;
+        step_num = 0;
 
         // In case we have already been running...
         if (timer != 0) {
             clearInterval(timer);
             timer = 0;
         }
-        
-        canvContainer = document.getElementById('canvContainer');
-        canvas = document.getElementById('myCanvas');  
+                
+        canvContainer = el('#canvContainer');
+        canvas = el('#myCanvas');  
         ctx = canvas.getContext('2d');
         sz = Math.min()
         canvas.width = canvContainer.clientWidth;
         canvas.height = window.innerHeight -140;   // Kludge to cater for scroll bar :=)
 
-        delay_ms = parseInt(document.getElementById('delayms').value);
-        dx = parseInt(document.getElementById('step_size').value);
-        dy = dx;
-        dot_size = parseInt(document.getElementById('dot_size').value);
-        line_width = parseInt(document.getElementById('line_width').value);
-        max_iter = parseInt(document.getElementById('max_iter').value);
-
-        plot_type = document.querySelector('input[name="plot_type"]:checked').value;
-
-        console.log(`Plot Type = ${plot_type}`);
-        // console.log(`Canvas: ${canvas.width} x ${canvas.height}`);
-        // console.log(`max_iter = ${max_iter} pts_at_a_time = ${pts_at_a_time}`);
+        get_params();
 
         // Origin of real world origin on canvas
         origin_canv_x = canvas.width / 2 - canv_margin;
@@ -220,35 +244,40 @@ more contrast between consecutive colors (hue)
         y_old = y;
         line_color = random_color();
 
+        // Set canvas styles for inital walk
+        ctx.fillStyle = random_color();
+        ctx.strokeStyle = random_color();
+        ctx.lineWidth = line_width;
+        ctx.lineCap = "round";
+
         running = true;
-        timer = setInterval(walk, delay_ms);
+        timer = setInterval(walk, delta_t);
     }
 
 </script>
 </head>
 <body>
-    <div id="actionpanel">
-
+<div id="actionpanel">
 
     <div id="inputpanel">
-        <label for="delayms">Max steps</label>
+        <label for="max_iter">Max steps</label>
         <input id="max_iter" size="8" value="200" pattern="[0-9]+">
 
-        <label for="delayms">&Delta;t (ms)</label>
-        <input id="delayms" size="8" value="10" required pattern="[0-9]+">
+        <label for="delta_t">&Delta;t (ms)</label>
+        <input id="delta_t" size="8"  value="10">
 
         <label for="step_size">&Delta;x (pixels)</label>
         <input id="step_size" size="8" value="15" required pattern="[0-9]+">
 
-        <label for="dot_size">Dot size (pixels)</label>
+        <label for="dot_size">Tile/Dot size (pixels)</label>
         <input id="dot_size" size="8" value="14" required pattern="[0-9]+">
 
         <label for="line_width">Line width (pixels)</label>
         <input id="line_width" size="8" value="1" required pattern="[0-9]+">
-
         
-        <label for="line_width">Highlight final point?</label>
-        <input type="checkbox" onclick="toggle_display()">
+        <label for="final_point">Plot <em>only</em> last point?</label>
+        <input id="final_point" type="checkbox" onclick="final_point_plot_selected()">
+
         <div>Display Type: </div>
         <div>
             <input type="radio" id="line" name="plot_type" value="line" checked="true">
@@ -273,12 +302,15 @@ more contrast between consecutive colors (hue)
         <span id="step">Step: <span id="stepnum"></span></span>
     </div>
 
-
-    
+    <div id="textpanel">
+        <h2>Random Walk</h2>
+        <p>Random walk in 2 dimensions.</p>
+        <p>Martin Bridge, 2023</p>
+    </div>    
 </div>
 
-    <div id="canvContainer" data-popup="#infotable">
-        <canvas id="myCanvas"></canvas>
-    </div>
+<div id="canvContainer" data-popup="#infotable">
+    <canvas id="myCanvas"></canvas>
+</div>
 </body>
 </html>
