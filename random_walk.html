@@ -82,19 +82,6 @@ button {
     // Get element from css selector
     const el = (sel, par) => (par || document).querySelector(sel);
 
-
-    function final_point_plot_selected() {
-        // If only plotting final point, then speed things up by setting delta_t to zero
-        // Also, change grid to smaller values
-        final_point_only = el('#final_point').checked;
-        if (final_point_only) {
-            el('#delta_t').value = "0";
-            el('#step_size').value = "3";
-            el('#dot_size').value = "2";
-        }
-    }
-
-
     function get_params() {
         // Assign input parameters from HTML to global variables
         max_steps = parseInt(el('#max_iter').value);
@@ -152,7 +139,6 @@ button {
         }
     }
         
-
     function walk() {
         if (running) {
             // Get next step
