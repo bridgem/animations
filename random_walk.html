@@ -91,29 +91,33 @@ button {
         dot_size = parseInt(el('#dot_size').value);
         half_dot_size = (dot_size == 1) ? 1 : Math.floor(dot_size / 2);
         line_width = parseInt(el('#line_width').value);
+        fade = el('#fade').checked;
         final_point_only = el('#final_point').checked;
         plot_type = el('input[name="plot_type"]:checked').value;
     }
 
     function random_color () {
-        h = Math.round(Math.random() * 255);
-        return `hsl(${h}, 100%, 50%)`;
+        // Random between mn and mx
+        rn = (mn, mx) => Math.ceil(mn + Math.random() * (mx - mn));
+        h = rn(0, 360);
+        s = rn(50, 100);
+        l = rn(50, 66);
+        return `hsl(${h}, ${s}%, ${l}%)`;
     }
 
-    function canvas_circle(canv_x, canv_y) {
+    function canvas_circle(x, y) {
         ctx.beginPath();
         if (half_dot_size == 1) {  // Radius 1
-            ctx.fillRect(canv_x, canv_y, 1, 1);
+            ctx.fillRect(x, y, 1, 1);
         } else {
-            ctx.arc(canv_x, canv_y, half_dot_size, 0, 2 * Math.PI);
+            ctx.arc(x, y, half_dot_size, 0, 2 * Math.PI);
         }
         ctx.fill();
     }
 
-    function canvas_tile(canv_x, canv_y) {
-        canv_x -= half_dot_size;
-        canv_y -= half_dot_size;
-        ctx.fillRect(canv_x, canv_y, dot_size, dot_size);
+    function canvas_tile(x, y) {
+        // Offset by half tile size
+        ctx.fillRect(x - half_dot_size, y - half_dot_size, dot_size, dot_size);
     }
 
     function canvas_line(x1, y1, x2, y2) {
@@ -131,8 +135,7 @@ button {
         var r = Math.random();
         if (r <= pb) {
             return -1;
-        }
-        else if (r > 1 - pf) {
+        } else if (r > 1 - pf) {
             return 1;
         } else {
             return 0;
@@ -165,6 +168,14 @@ button {
                 y = Math.floor(canvas.height / 2)
                 x_old = x;
                 y_old = y;
+
+
+                // Fade out the older plots
+                if (fade) {
+                    ctx.fillStyle = "hsla(0, 0%, 0%, 0.1)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+
                 ctx.fillStyle = random_color();
                 ctx.strokeStyle = random_color();
                 step_num = 0;
@@ -261,15 +272,18 @@ button {
         <label for="line_width">Line width (pixels)</label>
         <input id="line_width" size="8" value="1" required pattern="[0-9]+">
         
+        <label for="fade">Fade previous paths?</label>
+        <input id="fade" type="checkbox">
+
         <label for="final_point">Plot <em>only</em> last point?</label>
-        <input id="final_point" type="checkbox" onclick="final_point_plot_selected()">
+        <input id="final_point" type="checkbox">
 
         <div>Display Type: </div>
         <div>
-            <input type="radio" id="line" name="plot_type" value="line" checked="true">
+            <input type="radio" id="line" name="plot_type" value="line">
             <label for="line">Lines</label>
             <br/>
-            <input type="radio" id="tile" name="plot_type" value="tile" >
+            <input type="radio" id="tile" name="plot_type" value="tile" checked="true">
             <label for="tile">Tiles</label>
             <br/>
             <input type="radio" id="circle" name="plot_type" value="circle" >
