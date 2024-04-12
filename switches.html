@@ -115,10 +115,14 @@
     padding: 0.1em 0.5em 0.1em 0.5em;
 }
 
-#factors {
+#clicked, #factors {
     max-width: 600px;
+    line-height: 2em;
     overflow-wrap: break-word;
 }
+
+sup { vertical-align: top; position: relative; top: -0.5em; }
+
 </style>
 
 <!-- Google tag (gtag.js) -->
@@ -306,7 +310,7 @@ gtag('config', 'G-GF0VL3FQMY');
 
         let sqrt_s = Math.sqrt(switchn);
         if (Math.floor(sqrt_s) == sqrt_s)
-            sqrt = `(${sqrt_s}^2)`;
+            sqrt = ` = ${sqrt_s}<sup>2</sup>`;
         else
             sqrt = '';
 
@@ -358,9 +362,11 @@ gtag('config', 'G-GF0VL3FQMY');
     function getFactors(num) {
         let factorList = "";
         let numFactors = 0;
+        let sep = "";
         for (let i = 1; i <= num; i++) {
             if (num % i == 0) {
-                factorList += `${i},`;
+                factorList += `${sep}${i}`;
+                sep = ",";
                 numFactors++;
             }
         }
